@@ -10,7 +10,7 @@ The javascript required to run the code is included in the repository.
 
 ```
 ipython profile create iocamljs
-cp -r static `ipython profile locate iocamljs`
+cp -r static `ipython locate profile iocamljs`
 ipython notebook --profile=iocamljs
 ```
 
