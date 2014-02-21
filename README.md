@@ -32,5 +32,5 @@ The install command will cat together some javascript files, put the resulting k
 `static/services/kernels/js/kernel.js` then copy the `static` directory tree to
 the `iocamljs` profile.
 
-_Watch out for the browser caching old version of the javascript - in Chrome reload the page with ctrl-shift-r._
+_Watch out for the browser caching old versions of the javascript code (including from other ipython profiles) - in Chrome reload the page with ctrl-shift-r._
 

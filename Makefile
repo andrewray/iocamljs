@@ -68,15 +68,42 @@ STDLIB_MODULES=\
   weak
 PERVASIVES=$(STDLIB_MODULES) outcometree topdirs toploop
 
+# Lwt and js_of_ocaml
+
+EXTRA_MODULES = \
+	css \
+	dom \
+	dom_events \
+	dom_html \
+	event_arrows \
+	file \
+	firebug \
+	form \
+	js \
+	json \
+	deriving_Json \
+	lwt_js \
+	lwt_js_events \
+	regexp \
+	url \
+	xmlHttpRequest \
+	lwt 
+
+EXTRA_INCLUDES = \
+	`ocamlfind query js_of_ocaml -i-format` \
+	`ocamlfind query lwt -i-format` \
+
 #toplevel.byte: $(OBJS:cmx=cmo) toplevel.cmo
 #	ocamlfind ocamlc -linkall -g -package str -linkpkg toplevellib.cma -o $@.tmp $^
 
 $(NAME).js: $(NAME).byte $(COMP) $(JSFILES)
-	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -noruntime $(JSFILES) $(NAME).byte $(OPTIONS)
+	$(COMP) -I $(shell ocamlc -where)/compiler-libs -linkall -toplevel -noinline -noruntime \
+		$(EXTRA_INCLUDES) \
+		$(JSFILES) $(NAME).byte $(OPTIONS)
 
 $(NAME).byte: $(OBJS) $(JSOO)/compiler/compiler.cma
-	$(OCAMLC) -linkall -package str -linkpkg -o $@.tmp $(STDLIB) $(OBJS)
-	$(EXPUNGE) $@.tmp $@ $(PERVASIVES)
+	$(OCAMLC) -linkall -package str,lwt -linkpkg -o $@.tmp $(STDLIB) $(OBJS)
+	$(EXPUNGE) $@.tmp $@ $(PERVASIVES) $(EXTRA_MODULES)
 	rm -f $@.tmp
 
 %.cmo: %.ml
