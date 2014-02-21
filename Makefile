@@ -15,7 +15,10 @@ OCAMLLIB=toplevellib.cma
 endif
 
 COMP=$(JSOO)/compiler/$(COMPILER)
-JSFILES=$(JSOO)/runtime/runtime.js $(JSOO)/runtime/weak.js $(JSOO)/toplevel/toplevel_runtime.js
+JSFILES= \
+	runtime.js \
+	$(JSOO)/runtime/weak.js \
+	toplevel_runtime.js
 OCAMLC=ocamlfind ocamlc -package lwt,str -pp "camlp4o $(JSOO)/lib/syntax/pa_js.cmo" -I +compiler-libs -I $(JSOO)/lib -I $(JSOO)/compiler
 STDLIB= $(JSOO)/lib/$(LIBNAME).cma $(JSOO)/compiler/compiler.cma $(OCAMLLIB)
 EXPUNGE=$(shell ocamlc -where)/expunge
@@ -89,8 +92,15 @@ errors.cmi: errors.mli
 
 clean::
 	rm -f *.cm[io] $(NAME).byte $(NAME).js
+	- rm -fr *~
 
-depend:
-	ocamldep -pp "camlp4o $(JSOO)/lib/syntax/pa_js.cmo" -I $(JSOO)/compiler *.ml *.mli > .depend
+# set up your profile first!
+install:
+	cat kernel.js iocaml.js > static/services/kernels/js/kernel.js
+	cp -r static `ipython locate profile iocamljs`
 
--include .depend
+# static dependancies guff
+toplevel.cmo: errors.cmi $(JSOO)/compiler/driver.cmi 
+toplevel.cmx: errors.cmi $(JSOO)/compiler/driver.cmx 
+
+

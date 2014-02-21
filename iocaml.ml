@@ -56,38 +56,94 @@ let _ =
     in
     g##compile <- compile; (*XXX HACK!*)
 
+
+class type iocaml_result = object
+    method message : js_string t writeonly_prop
+    method compilerStatus : bool t writeonly_prop
+end
+
 class type iocaml = object
-    method name : js_string Js.t Js.prop
-    method execute : (js_string Js.t -> js_string Js.t) Js.writeonly_prop
+    method name : js_string t prop
+    method execute : (int -> js_string t -> iocaml_result t) writeonly_prop
 end
 
 let iocaml : iocaml Js.t = 
     let _ = Js.Unsafe.eval_string "iocaml = {};" in (* is there a proper way to do this? *)
     Js.Unsafe.variable "iocaml"
 
-let exec_buffer = Buffer.create 100 
-let exec_ppf = Format.formatter_of_buffer exec_buffer
+module Exec = struct
 
-let execute s =
-    let () = Buffer.clear exec_buffer in
-    let lb = Lexing.from_string s in
-    begin try
-        while true do
-            try
-                let phr = !Toploop.parse_toplevel_phrase lb in
-                ignore(Toploop.execute_phrase true exec_ppf phr)
-            with End_of_file -> raise End_of_file
-            | x -> Errors.report_error exec_ppf x; raise End_of_file
-        done
-    with End_of_file -> ()
-    end;
-    Format.pp_print_flush exec_ppf ();
-    Buffer.contents exec_buffer
+    let buffer = Buffer.create 4096
+    let formatter = Format.formatter_of_buffer buffer
+
+    let get_error_loc = function 
+        | Syntaxerr.Error(x) -> Syntaxerr.location_of_error x
+        | Lexer.Error(_, loc) 
+        | Typecore.Error(loc, _, _) 
+        | Typetexp.Error(loc, _, _) 
+        | Typedecl.Error(loc, _) 
+        | Typeclass.Error(loc, _, _) 
+        | Typemod.Error(loc, _, _) 
+        | Translcore.Error(loc, _) 
+        | Translclass.Error(loc, _) 
+        | Translmod.Error(loc, _) -> loc
+        | _ -> raise Not_found
+
+    exception Exit
+    let report_error x = 
+        try begin
+            Errors.report_error formatter x; 
+            (try begin
+                if Location.highlight_locations formatter (get_error_loc x) Location.none then 
+                    Format.pp_print_flush formatter ()
+            end with _ -> ()); 
+            false
+        end with x -> (* shouldn't happen any more *) 
+            (Format.fprintf formatter "exn: %s@." (Printexc.to_string x); false)
+
+    let run_cell_lb execution_count lb =
+        let cell_name = "["^string_of_int execution_count^"]" in
+        Buffer.clear buffer;
+        Location.init lb cell_name;
+        Location.input_name := cell_name;
+        Location.input_lexbuf := Some(lb);
+        let success =
+            try begin
+                List.iter
+                    (fun ph ->
+                        if not (Toploop.execute_phrase true formatter ph) then raise Exit)
+                    (!Toploop.parse_use_file lb);
+                true
+            end with
+            | Exit -> false
+            | Sys.Break -> (Format.fprintf formatter "Interrupted.@."; false)
+            | x -> report_error x
+        in
+        success
+
+    let run_cell execution_count code = run_cell_lb execution_count 
+        (* little hack - make sure code ends with a '\n' otherwise the
+         * error reporting isn't quite right *)
+        Lexing.(from_string (code ^ "\n"))
+
+    let execute execution_count str = 
+        let status = run_cell execution_count (Js.to_string str) in
+        let v : iocaml_result t = Js.Unsafe.obj [||] in
+        v##message <- string (Buffer.contents buffer);
+        v##compilerStatus <- bool status;
+        v
+
+end
 
 let _ = 
-    Firebug.console##log (Js.string "js_of_iocaml");
+    Firebug.console##log (Js.string "iocamljs");
+    Sys.interactive := false;
+    Toploop.set_paths();
+    !Toploop.toplevel_startup_hook();
     Toploop.initialize_toplevel_env ();
     Toploop.input_name := "";
-    iocaml##name <- Js.string "js_of_Iocaml";
-    iocaml##execute <- (fun s -> Js.string (execute (Js.to_string s)))
+    iocaml##name <- Js.string "iocamljs"; (* XXX remove me, we've got the object now *)
+    iocaml##execute <- Exec.execute
+
+
 
