@@ -4,6 +4,8 @@ The OCaml toplevel compiled to javascript and interfaced to the IPython notebook
 
 ___This is very much a prototype currently and requires a lot more work___
 
+Basic code execution and writing to stdout and stderr are working at the moment.
+
 ## To run the code
 
 The javascript required to run the code is included in the repository.
@@ -16,10 +18,19 @@ ipython notebook --profile=iocamljs
 
 ## Building
 
-To build the code you need to download the source tarball of js-of-ocaml.  Edit the
+To build the code you need to download and build the source tarball of js-of-ocaml.  Edit the
 top of the Makefile to point to it.
 
-_You might need to compile this with the version of js-of-ocaml built from the tarball - not too sure on this._
+_You might need to compile this with the version of js-of-ocaml built from the tarball._
 
-The resulting iocaml.js file should be copied to `static/custom/custom.js`.
+```
+make
+make install
+```
+
+The install command will cat together some javascript files, put the resulting kernel in
+`static/services/kernels/js/kernel.js` then copy the `static` directory tree to
+the `iocamljs` profile.
+
+_Watch out for the browser caching old version of the javascript - in Chrome reload the page with ctrl-shift-r._
 
