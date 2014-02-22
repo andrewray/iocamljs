@@ -213,6 +213,35 @@ var IPython = (function (IPython) {
         }
     } 
 
+    Kernel.prototype.send_mime = function(mime_type,data) {
+        if (this.execute_context !== null && this.execute_context !== undefined) {
+            var d = {};
+            d[mime_type] = data;
+            var msg = this._get_msg("display_data", 
+                { 
+                    source   : 'iocamljs', 
+                    data     : d,
+                    metadata : {}
+                 });
+            msg.parent_header = this.execute_context;
+            this._handle_iopub_reply({data : JSON.stringify(msg)});
+        }
+    }
+
+    Kernel.prototype.send_clear = function(wait,stdout,stderr,other) {
+        if (this.execute_context !== null && this.execute_context !== undefined) {
+            var msg = this._get_msg("clear_output", 
+                {
+                    wait: wait, 
+                    stdout: stdout,
+                    stderr: stderr,
+                    other: other
+                });
+            msg.parent_header = this.execute_context;
+            this._handle_iopub_reply({data : JSON.stringify(msg)});
+        }
+    } 
+
     Kernel.prototype.execute = function (code, callbacks, options) {
         var that = this;
         var content = {

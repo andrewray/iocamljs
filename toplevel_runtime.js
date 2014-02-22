@@ -117,6 +117,13 @@ function caml_realloc_global (len) {
 
 /// In case the user tries to perform some I/Os...
 
+function caml_ml_display(mime_type, data) {
+    IPython.notebook.kernel.send_mime(mime_type, data);
+}
+function caml_ml_clear_display(wait,stdout,stderr,other) {
+    IPython.notebook.kernel.send_clear(wait,stdout,stderr,other);
+}
+
 //Provides: caml_sys_exit
 function caml_sys_exit () {
   caml_invalid_argument("Function 'exit' not implemented");

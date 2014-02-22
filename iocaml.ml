@@ -20,42 +20,124 @@
 
 open Js
 
-let split_primitives p =
-    let len = String.length p in
-    let rec split beg cur =
-        if cur >= len then []
-        else if p.[cur] = '\000' then
-            String.sub p beg (cur - beg) :: split (cur + 1) (cur + 1)
-        else
-            split beg (cur + 1) in
-    Array.of_list(split 0 0)
+module PatchCompile = struct
 
-class type global_data = object
-    method toc : (string * string) list Js.readonly_prop
-    method compile : (string -> string) Js.writeonly_prop
+    let split_primitives p =
+        let len = String.length p in
+        let rec split beg cur =
+            if cur >= len then []
+            else if p.[cur] = '\000' then
+                String.sub p beg (cur - beg) :: split (cur + 1) (cur + 1)
+            else
+                split beg (cur + 1) in
+        Array.of_list(split 0 0)
+
+    class type global_data = object
+        method toc : (string * string) list Js.readonly_prop
+        method compile : (string -> string) Js.writeonly_prop
+    end
+
+    external global_data : unit -> global_data Js.t = "caml_get_global_data"
+    let g = global_data ()
+
+    let _ = (* patch the compile method *)
+    (*
+      Util.set_debug "parser";
+      Util.set_debug "deadcode";
+      Util.set_debug "main";
+    *)
+        let toc = g##toc in
+        let prims = split_primitives (List.assoc "PRIM" toc) in
+
+        (* so what does this actually do? *)
+        let compile s =
+            let output_program = Driver.from_string prims s in
+            let b = Buffer.create 100 in
+            output_program (Pretty_print.to_buffer b);
+            Buffer.contents b
+        in
+        g##compile <- compile; (*XXX HACK!*)
+
 end
 
-external global_data : unit -> global_data Js.t = "caml_get_global_data"
-let g = global_data ()
+module Base64 = struct
 
-let _ =
 (*
-  Util.set_debug "parser";
-  Util.set_debug "deadcode";
-  Util.set_debug "main";
-*)
-    let toc = g##toc in
-    let prims = split_primitives (List.assoc "PRIM" toc) in
+ * Copyright (c) 2006-2009 Citrix Systems Inc.
+ * Copyright (c) 2010 Thomas Gazagnaire <thomas@gazagnaire.com>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ *)
 
-    (* so what does this actually do? *)
-    let compile s =
-        let output_program = Driver.from_string prims s in
-        let b = Buffer.create 100 in
-        output_program (Pretty_print.to_buffer b);
-        Buffer.contents b
-    in
-    g##compile <- compile; (*XXX HACK!*)
 
+    (* taken from https://github.com/avsm/ocaml-cohttp/blob/master/cohttp/base64.ml *)
+
+    let code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    let padding = '='
+
+    let of_char x = if x = padding then 0 else String.index code x
+
+    let to_char x = code.[x]
+
+    let decode x = 
+      let words = String.length x / 4 in
+      let padding = 
+        if String.length x = 0 then 0 else (
+        if x.[String.length x - 2] = padding
+        then 2 else (if x.[String.length x - 1] = padding then 1 else 0)) in
+      let output = String.make (words * 3 - padding) '\000' in
+      for i = 0 to words - 1 do
+        let a = of_char x.[4 * i + 0]
+        and b = of_char x.[4 * i + 1]
+        and c = of_char x.[4 * i + 2]
+        and d = of_char x.[4 * i + 3] in
+        let n = (a lsl 18) lor (b lsl 12) lor (c lsl 6) lor d in
+        let x = (n lsr 16) land 255
+        and y = (n lsr 8) land 255
+        and z = n land 255 in
+        output.[3 * i + 0] <- char_of_int x;
+        if i <> words - 1 || padding < 2 then output.[3 * i + 1] <- char_of_int y;
+        if i <> words - 1 || padding < 1 then output.[3 * i + 2] <- char_of_int z;
+      done;
+      output
+
+    let encode x = 
+      let length = String.length x in
+      let words = (length + 2) / 3 in (* rounded up *)
+      let padding = if length mod 3 = 0 then 0 else 3 - (length mod 3) in
+      let output = String.make (words * 4) '\000' in
+      let get i = if i >= length then 0 else int_of_char x.[i] in
+      for i = 0 to words - 1 do
+        let x = get (3 * i + 0)
+        and y = get (3 * i + 1)
+        and z = get (3 * i + 2) in
+        let n = (x lsl 16) lor (y lsl 8) lor z in 
+        let a = (n lsr 18) land 63
+        and b = (n lsr 12) land 63
+        and c = (n lsr 6) land 63
+        and d = n land 63 in
+        output.[4 * i + 0] <- to_char a;
+        output.[4 * i + 1] <- to_char b;
+        output.[4 * i + 2] <- to_char c;
+        output.[4 * i + 3] <- to_char d;
+      done;
+      for i = 1 to padding do
+        output.[String.length output - i] <- '=';
+      done;
+      output
+
+end
 
 class type iocaml_result = object
     method message : js_string t writeonly_prop
@@ -66,10 +148,6 @@ class type iocaml = object
     method name : js_string t prop
     method execute : (int -> js_string t -> iocaml_result t) writeonly_prop
 end
-
-let iocaml : iocaml Js.t = 
-    let _ = Js.Unsafe.eval_string "iocaml = {};" in (* is there a proper way to do this? *)
-    Js.Unsafe.variable "iocaml"
 
 module Exec = struct
 
@@ -135,15 +213,40 @@ module Exec = struct
 
 end
 
-let _ = 
+let display ?(base64=false) mime_type data = 
+    let data = 
+        if not base64 then data
+        else Base64.encode data
+    in
+    let data = Js.string data in
+    Js.Unsafe.fun_call 
+        (Js.Unsafe.variable "caml_ml_display") 
+            [| Js.Unsafe.inject mime_type; Js.Unsafe.inject data  |]
+
+let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () = 
+   Js.Unsafe.fun_call 
+        (Js.Unsafe.variable "caml_ml_clear_display") 
+            [|
+                Js.Unsafe.inject wait;
+                Js.Unsafe.inject stdout;
+                Js.Unsafe.inject stderr;
+                Js.Unsafe.inject other;
+            |]
+
+let main () = 
+    let iocaml : iocaml Js.t = 
+        let _ = Js.Unsafe.eval_string "iocaml = {};" in (* is there a proper way to do this? *)
+        Js.Unsafe.variable "iocaml"
+    in
     Firebug.console##log (Js.string "iocamljs");
     Sys.interactive := false;
     Toploop.set_paths();
     !Toploop.toplevel_startup_hook();
     Toploop.initialize_toplevel_env ();
     Toploop.input_name := "";
+    (* this is what kernel.js will used to compile code from the notebook *)
     iocaml##name <- Js.string "iocamljs"; (* XXX remove me, we've got the object now *)
-    iocaml##execute <- Exec.execute
-
+    iocaml##execute <- Exec.execute;
+    ()
 
 

@@ -1,7 +1,7 @@
 JSOO = /home/andyman/dev/tools/ocaml/js_of_ocaml-1.4
 
 NAME=iocaml
-OBJS=$(NAME).cmo
+OBJS=iocaml.cmo iocaml_main.cmo
 
 all: $(NAME).js
 
@@ -87,9 +87,13 @@ EXTRA_MODULES = \
 	regexp \
 	url \
 	xmlHttpRequest \
-	lwt 
+	lwt \
+	typed_array \
+	webGL \
+	iocaml
 
 EXTRA_INCLUDES = \
+	-I . \
 	`ocamlfind query js_of_ocaml -i-format` \
 	`ocamlfind query lwt -i-format` \
 
@@ -97,11 +101,11 @@ EXTRA_INCLUDES = \
 #	ocamlfind ocamlc -linkall -g -package str -linkpkg toplevellib.cma -o $@.tmp $^
 
 $(NAME).js: $(NAME).byte $(COMP) $(JSFILES)
-	$(COMP) -I $(shell ocamlc -where)/compiler-libs -linkall -toplevel -noinline -noruntime \
+	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -noruntime \
 		$(EXTRA_INCLUDES) \
 		$(JSFILES) $(NAME).byte $(OPTIONS)
 
-$(NAME).byte: $(OBJS) $(JSOO)/compiler/compiler.cma
+$(NAME).byte: iocaml.cmi $(OBJS) $(JSOO)/compiler/compiler.cma
 	$(OCAMLC) -linkall -package str,lwt -linkpkg -o $@.tmp $(STDLIB) $(OBJS)
 	$(EXPUNGE) $@.tmp $@ $(PERVASIVES) $(EXTRA_MODULES)
 	rm -f $@.tmp
@@ -117,6 +121,9 @@ $(JSOO)/compiler/compiler.cma:
 errors.cmi: errors.mli
 	$(OCAMLC) -c $<
 
+iocaml.cmi: iocaml.mli
+	ocamlfind ocamlc -c -package js_of_ocaml iocaml.mli
+
 clean::
 	rm -f *.cm[io] $(NAME).byte $(NAME).js
 	- rm -fr *~
@@ -128,6 +135,6 @@ install:
 
 # static dependancies guff
 toplevel.cmo: errors.cmi $(JSOO)/compiler/driver.cmi 
-toplevel.cmx: errors.cmi $(JSOO)/compiler/driver.cmx 
-
+iocaml_main.cmo: iocaml.cmi
+iocaml.cmo: iocaml.cmi
 
