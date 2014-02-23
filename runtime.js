@@ -1,3 +1,5 @@
+//concat mlString.js ieee_754.js int64.js md5.js marshall.js lexing.js parsing.js json.js bigarray.js unix.js stdlib.js io.js jslib.js jslib_js_of_ocaml.js
+//# 1 "mlString.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -30,8 +32,7 @@
 // implementation of string differs significantly from Javascript.
 // This way, using the wrong object is detected early.
 
-//Provides: MlString
-//Requires: caml_array_bound_error
+//Provided caml_str_repeat
 function caml_str_repeat(n, s) {
   if (!n) { return ""; }
   if (n & 1) { return caml_str_repeat(n - 1, s) + s; }
@@ -39,13 +40,18 @@ function caml_str_repeat(n, s) {
   return r + r;
 }
 
+//Provides: MlString
+//Requires: caml_raise_with_arg, js_print_stderr, caml_global_data
 function MlString(param) {
   if (param != null) {
     this.bytes = this.fullBytes = param;
     this.last = this.len = param.length;
   }
 }
-
+//This is here to avoid circular deps
+function mlstring_bound_error () {
+    caml_raise_with_arg(caml_global_data[4],new MlString("index out of bounds"));
+}
 MlString.prototype = {
   // JS string
   string:null,
@@ -61,14 +67,25 @@ MlString.prototype = {
 
   toJsString:function() {
     // assumes this.string == null
-    return this.string = decodeURIComponent (escape(this.getFullBytes()));
+    var a = this.getFullBytes();
+    try {
+      return this.string = decodeURIComponent (escape(a));
+    } catch (e){
+      js_print_stderr("MlString.toJsString: wrong encoding for \"%s\" ", a);
+      return a;
+    }
   },
 
   toBytes:function() {
     // assumes this.bytes == null
-    if (this.string != null)
-      var b = unescape (encodeURIComponent (this.string));
-    else {
+    if (this.string != null){
+      try {
+        var b = unescape (encodeURIComponent (this.string));
+      } catch (e) {
+        js_print_stderr("MlString.toBytes: wrong encoding for \"%s\" ", this.string);
+        var b = this.string;
+      }
+    } else {
       var b = "", a = this.array, l = a.length;
       // FIX should benchmark different conversion functions
       for (var i = 0; i < l; i ++) b += String.fromCharCode (a[i]);
@@ -158,7 +175,7 @@ MlString.prototype = {
 
   safeGet:function (i) {
     if (this.len == null) this.toBytes();
-    if ((i < 0) || (i >= this.len)) caml_array_bound_error ();
+    if ((i < 0) || (i >= this.len)) mlstring_bound_error ();
     return this.get(i);
   },
 
@@ -180,7 +197,7 @@ MlString.prototype = {
 
   safeSet:function (i, c) {
     if (this.len == null) this.toBytes ();
-    if ((i < 0) || (i >= this.len)) caml_array_bound_error ();
+    if ((i < 0) || (i >= this.len)) mlstring_bound_error ();
     this.set(i, c);
   },
 
@@ -226,10 +243,15 @@ MlString.prototype = {
 }
 
 // Conversion Javascript -> Caml
+
+//Provides: MlWrappedString
+//Requires: MlString
 function MlWrappedString (s) { this.string = s; }
 MlWrappedString.prototype = new MlString();
 
 // Uninitialized Caml string
+//Provides: MlMakeString
+//Requires: MlString
 function MlMakeString (l) { this.bytes = ""; this.len = l; }
 MlMakeString.prototype = new MlString ();
 
@@ -242,8 +264,7 @@ function MlStringFromArray (a) {
 MlStringFromArray.prototype = new MlString ();
 
 //Provides: caml_create_string const
-//Requires: MlString
-//Requires: caml_invalid_argument
+//Requires: MlMakeString,caml_invalid_argument
 function caml_create_string(len) {
   if (len < 0) caml_invalid_argument("String.create");
   return new MlMakeString(len);
@@ -294,6 +315,10 @@ function caml_blit_string(s1, i1, s2, i2, len) {
   if (!a) a = s2.toArray(); else { s2.bytes = s2.string = null; }
   s1.blitToArray (i1, a, i2, len);
 }
+//Provides: caml_new_string
+//Requires: MlString
+function caml_new_string(x){return new MlString(x);}
+//# 1 "ieee_754.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -351,7 +376,7 @@ function caml_int64_float_of_bits (x) {
   var k = Math.pow(2,-24);
   var res = (x[1]*k+x[2])*k+(x[3]&0xf);
   if (exp > 0) {
-    res += 16
+    res += 16;
     res *= Math.pow(2,exp-1027);
   } else
     res *= Math.pow(2,-1026);
@@ -458,6 +483,7 @@ function caml_tanh_float (x) {
   var y = Math.exp(x), z = Math.exp(-x);
   return (y + z) / (y - z);
 }
+//# 1 "int64.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -791,6 +817,7 @@ function caml_int64_to_bytes(x) {
   return [x[3] >> 8, x[3] & 0xff, x[2] >> 16, (x[2] >> 8) & 0xff, x[2] & 0xff,
           x[1] >> 16, (x[1] >> 8) & 0xff, x[1] & 0xff];
 }
+//# 1 "md5.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -831,10 +858,9 @@ function () {
   function md5(buffer, length) {
     var i = length;
     buffer[i >> 2] |= 0x80 << (8 * (i & 3));
-    for (i = (i & ~0x3) + 4;(i & 0x3F) < 56 ;i += 4)
-      buffer[i >> 2] = 0;
-    buffer[i >> 2] = length << 3;
-    i += 4;
+    for (i = (i & ~0x3) + 8;(i & 0x3F) < 60 ;i += 4)
+      buffer[(i >> 2) - 1] = 0;
+    buffer[(i >> 2) -1] = length << 3;
     buffer[i >> 2] = (length >> 29) & 0x1FFFFFFF;
 
     var w = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476];
@@ -947,6 +973,7 @@ function () {
     return new MlStringFromArray(md5(buf, len));
   }
 } ();
+//# 1 "marshall.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -1229,7 +1256,7 @@ function caml_marshal_data_size (s, ofs) {
 }
 
 //Provides: caml_output_val
-//Requires: caml_marshal_constants, caml_int64_to_bytes, caml_failwith
+//Requires: caml_marshal_constants, caml_int64_to_bytes, caml_failwith, MlString
 var caml_output_val = function (){
   function Writer () { this.chunk = []; }
   Writer.prototype = {
@@ -1329,6 +1356,7 @@ function caml_output_value_to_buffer (s, ofs, len, v, fl) {
   if (t.length > len) caml_failwith ("Marshal.to_buffer: buffer overflow");
   caml_blit_string(t, 0, s, ofs, t.length);
 }
+//# 1 "lexing.js"
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -1571,6 +1599,7 @@ function caml_new_lex_engine(tbl, start_state, lexbuf) {
   }
 }
 
+//# 1 "parsing.js"
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -1807,6 +1836,7 @@ function caml_parse_engine(tables, env, cmd, arg)
 //Provides: caml_set_parser_trace const
 //Dummy function!
 function caml_set_parser_trace() { return 0; }
+//# 1 "json.js"
 /*
     json.js
     2011-02-23
@@ -2327,7 +2357,139 @@ if (!JSON) {
 
 }());
 
-function caml_json() { return JSON; }// Js_of_ocaml runtime support
+function caml_json() { return JSON; }//# 1 "bigarray.js"
+//Provides: caml_ba_init const
+function caml_ba_init () {}
+
+//Provides: caml_ba_create const
+//Requires: caml_invalid_argument
+var caml_ba_views;
+
+function caml_ba_create (kind, layout, dim) {
+  if (dim.length != 2)
+    caml_invalid_argument("Bigarray.create: bad number of dimensions");
+  if (layout != 0)
+    caml_invalid_argument("Bigarray.create: unsupported layout");
+  if (dim [1] < 0)
+    caml_invalid_argument("Bigarray.create: negative dimension");
+  if (!caml_ba_views) {
+    var g = joo_global_object;
+    caml_ba_views =
+      [g.Float32Array, g.Float64Array, g.Int8Array, g.Uint8Array,
+       g.Int16Array, g.Uint16Array, g.Int32Array, null,
+       g.Int32Array, g.Int32Array, null, null, g.Uint8Array];
+  }
+  var View = caml_ba_views[kind];
+  if (!View) caml_invalid_argument("Bigarray.create: unsupported kind");
+  return new View (dim[1]);
+}
+
+//Provides: caml_ba_dim_1 const
+
+function caml_ba_dim_1 (b) { return b.length; }
+
+//Provides: caml_ba_kind const
+
+// Not exactly the bigarray kind, but accurate enough to create
+// another array of the same kind
+function caml_ba_kind (b) {
+  for (var i = 0; caml_ba_views[i]; i++)
+    if (b instanceof caml_ba_views[i]) return i;
+  return 0; // Should not happen
+}
+
+//Provides: caml_ba_layout const
+
+function caml_ba_layout () { return 0; }
+
+//Provides: caml_ba_sub const
+//Requires: caml_invalid_argument
+
+function caml_ba_sub (b, ofs, len) {
+  if (ofs < 0 || len < 0 || ofs + len > b.length)
+    caml_invalid_argument("Bigarray.sub: bad sub-array");
+  return b.subarray(ofs, ofs + len);
+}
+
+//Provides: caml_ba_blit
+//Requires: caml_invalid_argument
+
+function caml_ba_blit (src, dst) {
+  if (dst.length != src.length)
+    caml_invalid_argument ("Bigarray.blit: dimension mismatch");
+  dst.set(src);
+  return 0;
+}
+
+//Provides: caml_ba_fill
+
+function caml_ba_fill (b, init) {
+  for (var i = 0; i < b.length; i++) b[i] = init;
+}
+
+//Provides: caml_ba_get_1 mutable
+//Requires: caml_array_bound_error
+
+function caml_ba_get_1 (b, ind) {
+  if ((ind < 0) || (ind >= b.length)) caml_array_bound_error();
+  return b[ind];
+}
+
+//Provides: caml_ba_set_1
+//Requires: caml_array_bound_error
+
+function caml_ba_set_1 (b, ind, newval) {
+  if ((ind < 0) || (ind >= b.length)) caml_array_bound_error();
+  b[ind] = newval;
+  return 0;
+}
+//# 1 "unix.js"
+//Provides: unix_gettimeofday
+function unix_gettimeofday () {
+  return (new Date()).getTime() / 1000;
+}
+
+//Provides: unix_time
+//Requires: unix_gettimeofday
+function unix_time () {
+  return Math.floor(unix_gettimeofday ());
+}
+
+//Provides: unix_gmtime
+function unix_gmtime (t) {
+  var d = new Date (t * 1000);
+  var januaryfirst = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  var doy = Math.floor((d - januaryfirst) / 86400000);
+  return [0, d.getUTCSeconds(), d.getUTCMinutes(), d.getUTCHours(),
+          d.getUTCDate(), d.getUTCMonth(), d.getUTCFullYear() - 1900,
+          d.getUTCDay(), doy,
+          false | 0 /* for UTC daylight savings time is false */]
+}
+
+//Provides: unix_localtime
+function unix_localtime (t) {
+  var d = new Date (t * 1000);
+  var januaryfirst = new Date(d.getFullYear(), 0, 1);
+  var doy = Math.floor((d - januaryfirst) / 86400000);
+  var jan = new Date(d.getFullYear(), 0, 1);
+  var jul = new Date(d.getFullYear(), 6, 1);
+  var stdTimezoneOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+  return [0, d.getSeconds(), d.getMinutes(), d.getHours(),
+  d.getDate(), d.getMonth(), d.getFullYear() - 1900,
+  d.getDay(), doy,
+  (d.getTimezoneOffset() < stdTimezoneOffset) | 0 /* daylight savings time  field. */]
+}
+
+//Provides: unix_mktime
+//Requires: unix_localtime
+function unix_mktime(tm){
+    var d = new Date(tm[6]+1900,tm[5],tm[4],tm[3],tm[2],tm[1]);
+    var t = Math.floor(d.getTime() / 1000);
+    var tm2 = unix_localtime(t);
+    return [0,t,tm2];
+}
+//# 1 "stdlib.js"
+// Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
 // Laboratoire PPS - CNRS Université Paris Diderot
@@ -2377,6 +2539,12 @@ var caml_global_data = [0];
 //Requires: caml_global_data
 function caml_register_global (n, v) { caml_global_data[n + 1] = v; }
 
+//Provides: caml_get_global_data
+//Requires: caml_global_data
+function caml_get_global_data () { return caml_global_data; }
+
+//Raise exception
+
 //Provides: caml_raise_constant
 function caml_raise_constant (tag) { throw [0, tag]; }
 
@@ -2384,15 +2552,15 @@ function caml_raise_constant (tag) { throw [0, tag]; }
 function caml_raise_with_arg (tag, arg) { throw [0, tag, arg]; }
 
 //Provides: caml_raise_with_string
-//Requires: caml_raise_with_arg, MlString
+//Requires: caml_raise_with_arg,MlWrappedString
 function caml_raise_with_string (tag, msg) {
   caml_raise_with_arg (tag, new MlWrappedString (msg));
 }
 
-//Provides: caml_invalid_argument
-//Requires: caml_raise_with_string
-function caml_invalid_argument (msg) {
-  caml_raise_with_string(caml_global_data[4], msg);
+//Provides: caml_raise_sys_error
+//Requires: caml_raise_with_string, caml_global_data
+function caml_raise_sys_error (msg) {
+  caml_raise_with_string(caml_global_data[2], msg);
 }
 
 //Provides: caml_failwith
@@ -2401,10 +2569,16 @@ function caml_failwith (msg) {
   caml_raise_with_string(caml_global_data[3], msg);
 }
 
-//Provides: caml_array_bound_error
-//Requires: caml_invalid_argument
-function caml_array_bound_error () {
-  caml_invalid_argument("index out of bounds");
+//Provides: caml_invalid_argument
+//Requires: caml_raise_with_string, caml_global_data
+function caml_invalid_argument (msg) {
+  caml_raise_with_string(caml_global_data[4], msg);
+}
+
+//Provides: caml_raise_end_of_file
+//Requires: caml_raise_constant, caml_global_data
+function caml_raise_end_of_file () {
+  caml_raise_constant(caml_global_data[5]);
 }
 
 //Provides: caml_raise_zero_divide
@@ -2415,7 +2589,15 @@ function caml_raise_zero_divide () {
 
 //Provides: caml_raise_not_found
 //Requires: caml_raise_constant, caml_global_data
-function caml_raise_not_found () { caml_raise_constant(caml_global_data[7]); }
+function caml_raise_not_found () {
+  caml_raise_constant(caml_global_data[7]); }
+
+
+//Provides: caml_array_bound_error
+//Requires: caml_invalid_argument
+function caml_array_bound_error () {
+  caml_invalid_argument("index out of bounds");
+}
 
 //Provides: caml_update_dummy
 function caml_update_dummy (x, y) {
@@ -2498,7 +2680,7 @@ function caml_compare_val (a, b, total) {
     if (!(total && a === b)) {
       if (a instanceof MlString) {
         if (b instanceof MlString) {
-            if (a != b) {
+            if (a !== b) {
 		var x = a.compare(b);
 		if (x != 0) return x;
 	    }
@@ -2572,7 +2754,7 @@ function caml_int_compare (a, b) {
 //Requires: caml_compare_val
 function caml_equal (x, y) { return +(caml_compare_val(x,y,false) == 0); }
 //Provides: caml_notequal mutable
-//Requires: caml_compare
+//Requires: caml_compare_val
 function caml_notequal (x, y) { return +(caml_compare_val(x,y,false) != 0); }
 //Provides: caml_greaterequal mutable
 //Requires: caml_compare
@@ -2643,6 +2825,13 @@ function caml_float_of_string(s) {
   s = s.replace(/_/g,"");
   res = +s;
   if (((s.length > 0) && (res === res)) || /^[+-]?nan$/i.test(s)) return res;
+  if(/^ *0x[0-9a-f_]+p[+-]?[0-9_]+/i.test(s)){
+    var pidx = s.indexOf('p');
+    pidx = (pidx==-1)?s.indexOf('P'):pidx;
+    var exp = +s.substring(pidx + 1);
+    res = +s.substring(0,pidx);
+    return res * Math.pow(2,exp);
+  }
   caml_failwith("float_of_string");
 }
 
@@ -2707,7 +2896,7 @@ function caml_parse_format (fmt) {
 }
 
 //Provides: caml_finish_formatting
-//Requires: MlString
+//Requires: MlWrappedString
 function caml_finish_formatting(f, rawbuffer) {
   if (f.uppercase) rawbuffer = rawbuffer.toUpperCase();
   var len = rawbuffer.length;
@@ -2736,7 +2925,7 @@ function caml_finish_formatting(f, rawbuffer) {
 }
 
 //Provides: caml_format_int const
-//Requires: caml_parse_format, caml_finish_formatting, MlString
+//Requires: caml_parse_format, caml_finish_formatting, MlWrappedString
 function caml_format_int(fmt, i) {
   if (fmt.toString() == "%d") return new MlWrappedString(""+i);
   var f = caml_parse_format(fmt);
@@ -2813,7 +3002,7 @@ function caml_hash_univ_param (count, limit, obj) {
         // Object
         count --;
         hash_accu = (hash_accu * 65599 + obj[2]) | 0;
-        break
+        break;
       case 250:
         // Forward
         limit++; hash_aux(obj); break;
@@ -2853,7 +3042,7 @@ function caml_hash_univ_param (count, limit, obj) {
 }
 
 //Provides: caml_hash mutable
-//Requires: MlString, caml_int64_bits_of_float
+//Requires: MlString, caml_int64_bits_of_float, caml_mul
 var caml_hash =
 function () {
   var HASH_QUEUE_SIZE = 256;
@@ -2992,7 +3181,7 @@ function () {
 var caml_initial_time = new Date() * 0.001;
 function caml_sys_time () { return new Date() * 0.001 - caml_initial_time; }
 //Provides: caml_sys_get_config const
-//Requires: MlString
+//Requires: MlWrappedString
 function caml_sys_get_config () {
   return [0, new MlWrappedString("Unix"), 32, 0];
 }
@@ -3027,7 +3216,7 @@ function caml_array_append(a1, a2) {
 //Provides: caml_array_concat mutable
 function caml_array_concat(l) {
   var a = [0];
-  while (l != 0) {
+  while (l !== 0) {
     var b = l[1];
     for (var i = 1; i < b.length; i++) a.push(b[i]);
     l = l[2];
@@ -3058,28 +3247,6 @@ function caml_get_public_method (obj, tag) {
   return (tag == meths[li+1] ? meths[li] : 0);
 }
 
-/////////////////////////////
-
-// Dummy functions
-//Provides: caml_ml_out_channels_list const
-function caml_ml_out_channels_list () { return 0; }
-//Provides: caml_ml_flush const
-function caml_ml_flush () { return 0; }
-//Provides: caml_ml_open_descriptor_out const
-function caml_ml_open_descriptor_out (i) { 
-    if (i==1) return 1;
-    if (i==2) return 2;
-    return 0; 
-}
-//Provides: caml_ml_open_descriptor_in const
-function caml_ml_open_descriptor_in () { return 0; }
-//Provides: caml_sys_get_argv const
-//Requires: MlString
-function caml_sys_get_argv () {
-  var p = new MlWrappedString("a.out"); return [0, p, [0, p]];
-}
-//Provides: caml_ml_output const
-function caml_ml_output () { return 0; }
 //Provides: caml_final_register const
 function caml_final_register () { return 0; }
 //Provides: caml_final_release const
@@ -3087,23 +3254,244 @@ function caml_final_release () { return 0; }
 //Provides: caml_backtrace_status const
 function caml_backtrace_status () { return 0; }
 //Provides: caml_get_exception_backtrace const
-function caml_get_exception_backtrace () {
-  caml_invalid_argument
-    ("Primitive 'caml_get_exception_backtrace' not implemented");
-}
+function caml_get_exception_backtrace () { return 0; }
 //Provides: caml_get_exception_raw_backtrace const
-function caml_get_exception_raw_backtrace () {
-  caml_invalid_argument
-    ("Primitive 'caml_get_exception_raw_backtrace' not implemented");
-}
+function caml_get_exception_raw_backtrace () { return 0; }
 //Provides: caml_convert_raw_backtrace const
-function caml_convert_raw_backtrace () {
-  caml_invalid_argument
-    ("Primitive 'caml_convert_raw_backtrace' not implemented");
-}
+function caml_convert_raw_backtrace () { return 0; }
+//Provides: caml_get_current_callstack const
+function caml_get_current_callstack () { return 0; }
 //Provides: caml_sys_getenv
 //Requires: caml_raise_not_found
 function caml_sys_getenv () { caml_raise_not_found (); }
+//Provides: caml_sys_exit
+//Requires: caml_invalid_argument
+function caml_sys_exit () {
+  caml_invalid_argument("Function 'exit' not implemented");
+}
+
+//Provides: caml_sys_get_argv const
+//Requires: MlWrappedString
+function caml_sys_get_argv () {
+  var p = new MlWrappedString("a.out"); return [0, p, [0, p]];
+}
+
+//Provides: unix_inet_addr_of_string
+function unix_inet_addr_of_string () {return 0;}
+//# 1 "io.js"
+// Js_of_ocaml runtime support
+// http://www.ocsigen.org/js_of_ocaml/
+// Copyright (C) 2014 Jérôme Vouillon, Hugo Heuzard
+// Laboratoire PPS - CNRS Université Paris Diderot
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, with linking exception;
+// either version 2.1 of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+///////////// Io && fake FileSystem
+
+//Provides: joo_register_file
+//Requires: caml_global_data, MlString
+function joo_register_file(name,content) {
+  if(!caml_global_data.files)
+    caml_global_data.files = new Array();
+  caml_global_data.files[(name instanceof MlString)?name.toString():name] = content;
+}
+
+//Provides: caml_sys_file_exists
+//Requires: caml_global_data
+function caml_sys_file_exists (name) {
+  return (caml_global_data.files && caml_global_data.files[name.toString()])?1:0;
+}
+
+//Provides: caml_sys_open
+//Requires: MlString, caml_raise_sys_error, caml_global_data
+function caml_sys_open_internal(idx,v) {
+  if(caml_global_data.fds === undefined) caml_global_data.fds = new Array();
+  var s = (v instanceof MlString)?v:(new MlString(v));
+  s.offset = 0;
+  caml_global_data.fds[idx] = s;
+  caml_global_data.fd_last_idx = idx;
+  return idx;
+}
+function caml_sys_open (name, flags, perms) {
+    name = name.toString();
+  if (caml_global_data.files && caml_global_data.files[name]) {
+    var idx = caml_global_data.fd_last_idx?caml_global_data.fd_last_idx:0;
+    return caml_sys_open_internal (idx+1,caml_global_data.files[name]);
+  }
+  else caml_raise_sys_error (name + ": no such file or directory");
+}
+caml_sys_open_internal(0,""); //stdin
+caml_sys_open_internal(1,""); //stdout
+caml_sys_open_internal(2,""); //stderr
+
+
+// ocaml Channels
+
+//Provides: caml_ml_out_channels
+var caml_ml_out_channels = new Array();
+
+//Provides: caml_ml_out_channels_list
+//Requires: caml_ml_out_channels
+function caml_ml_out_channels_list () {
+  var l = 0;
+  for(var c in caml_ml_out_channels){
+    if(caml_ml_out_channels[c].opened)
+      l=[0,caml_ml_out_channels[c],l];
+  }
+  return l;
+}
+
+
+//Provides: caml_ml_open_descriptor_out
+//Requires: js_print_stderr, js_print_stdout, caml_ml_out_channels, caml_global_data,caml_sys_open
+function caml_ml_open_descriptor_out (fd) {
+  var output = function () { return; };
+  switch(fd){
+    case 1: output=js_print_stdout;break;
+    case 2: output=js_print_stderr;break;
+  }
+  var channel = {
+    data: caml_global_data.fds[fd],
+    fd:fd,
+    opened:true,
+
+    buffer:"",
+    output : output
+  };
+  caml_ml_out_channels[channel.fd]=channel;
+  return channel;
+}
+
+//Provides: caml_ml_open_descriptor_in
+//Requires: caml_global_data,caml_sys_open
+function caml_ml_open_descriptor_in (fd)  {
+  return {
+    data: caml_global_data.fds[fd],
+    fd:fd,
+    opened:true
+  };
+}
+
+//Input from in_channel
+
+//Provides: caml_ml_close_channel
+//Requires: caml_ml_flush, caml_ml_out_channels
+function caml_ml_close_channel (channel) {
+    caml_ml_flush(channel);
+    channel.opened = false;
+    delete caml_ml_out_channels[channel.fd];
+    return 0;
+}
+
+//Provides: caml_ml_channel_size
+function caml_ml_channel_size(chan) {
+  return chan.data.getLen();
+}
+
+//Provides: caml_ml_channel_size_64
+//Requires: caml_ml_channel_size,caml_int64_of_float
+function caml_ml_channel_size_64(chan) {
+  return caml_int64_of_float(chan.data.getLen());
+}
+
+//Provides: caml_ml_set_channel_output
+function caml_ml_set_channel_output(chan,f) {
+  chan.output = f;
+  return;
+}
+
+//Provides: caml_ml_input
+//Requires: caml_blit_string
+function caml_ml_input (chan, s, i, l) {
+  var l2 = chan.data.getLen() - chan.data.offset;
+  if (l2 < l) l = l2;
+  caml_blit_string(chan.data, chan.data.offset, s, i, l);
+  chan.data.offset += l;
+  return l;
+}
+
+//Provides: caml_input_value
+//Requires: caml_marshal_data_size, caml_input_value_from_string
+function caml_input_value (chan) {
+  caml_marshal_data_size (chan.data, chan.data.offset);
+  return caml_input_value_from_string(chan.data, chan.data.offset);
+}
+
+//Provides: caml_ml_input_char
+//Requires: caml_raise_end_of_file
+function caml_ml_input_char (chan) {
+  if (chan.data.offset >= chan.data.getLen())
+    caml_raise_end_of_file();
+  var c = chan.data.safeGet(chan.data.offset);
+  chan.data.offset++;
+  return c;
+}
+
+//Provides: caml_ml_input_scan_line
+function caml_ml_input_scan_line(chan){
+    var p = chan.data.offset;
+    var len = chan.data.getLen();
+    if(p >= len) { return 0;}
+    while(true) {
+        if(p >= len) return - (p - chan.data.offset);
+        if(chan.data.safeGet(p) == 10) return p - chan.data.offset + 1;
+        p++;
+    }
+}
+
+//Provides: caml_ml_flush
+//Requires: caml_raise_sys_error
+function caml_ml_flush (oc) {
+    if(! oc.opened) caml_raise_sys_error("");
+    if(oc.buffer == "") return 0;
+    if(oc.output) {oc.output(oc.buffer)};
+    oc.buffer = "";
+}
+
+//output to out_channel
+
+//Provides: caml_ml_output
+//Requires: caml_ml_flush
+//Requires: MlString, caml_create_string, caml_blit_string, caml_raise_sys_error
+function caml_ml_output (oc,buffer,offset,len) {
+    if(! oc.opened) caml_raise_sys_error("");
+    var string;
+    if(offset == 0 && buffer.getLen() == len)
+        string = buffer;
+    else {
+        string = caml_create_string(len);
+        caml_blit_string(buffer,offset,string,0,len);
+    }
+    var jsstring = string.toString();
+    var id = jsstring.lastIndexOf("\n");
+    if(id < 0)
+        oc.buffer+=jsstring;
+    else {
+        oc.buffer+=jsstring.substr(0,id);
+        caml_ml_flush (oc);
+        oc.buffer += jsstring.substr(id+1);
+    }
+}
+//Provides: caml_ml_output_char
+//Requires: caml_ml_output
+//Requires: caml_new_string
+function caml_ml_output_char (oc,c) {
+    var s = caml_new_string(String.fromCharCode(c));
+    caml_ml_output(oc,s,0,1);
+}
+//# 1 "jslib.js"
 // Js_of_ocaml library
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -3143,7 +3531,8 @@ function caml_js_typeof(o) { return typeof o; }
 
 //Provides: caml_js_on_ie const
 function caml_js_on_ie () {
-  var ua = this.navigator?this.navigator.userAgent:"";
+  var ua =
+    joo_global_object.navigator?joo_global_object.navigator.userAgent:"";
   return ua.indexOf("MSIE") != -1 && ua.indexOf("Opera") != 0;
 }
 
@@ -3156,16 +3545,39 @@ function caml_js_html_escape (s) {
           .replace(caml_js_regexps.quot, "&quot;");
 }
 
+//Provides: caml_js_html_entities
+function caml_js_html_entities(s) {
+    var str, temp = document.createElement('p');
+    temp.innerHTML= s;
+    str= temp.textContent || temp.innerText;
+    temp=null;
+    return str;
+}
+
 /////////// Debugging console
 //Provides: caml_js_get_console const
 function caml_js_get_console () {
-  var c = this.console?this.console:{};
+  var c = joo_global_object.console?joo_global_object.console:{};
   var m = ["log", "debug", "info", "warn", "error", "assert", "dir", "dirxml",
            "trace", "group", "groupCollapsed", "groupEnd", "time", "timeEnd"];
   function f () {}
   for (var i = 0; i < m.length; i++) if (!c[m[i]]) c[m[i]]=f;
   return c;
 }
+
+//Provides: js_print_stdout
+function js_print_stdout(s) {
+  joo_global_object.console
+  && joo_global_object.console.log
+  && joo_global_object.console.log(s);
+}
+//Provides: js_print_stderr
+function js_print_stderr(s) {
+  joo_global_object.console
+  && joo_global_object.console.error
+  && joo_global_object.console.error(s);
+}
+//# 1 "jslib_js_of_ocaml.js"
 // Js_of_ocaml library
 // http://www.ocsigen.org/js_of_ocaml/
 // Copyright (C) 2010 Jérôme Vouillon
@@ -3198,7 +3610,7 @@ function caml_js_to_float(x) { return x; }
 //Provides: caml_js_from_string mutable
 function caml_js_from_string(s) { return s.toString(); }
 //Provides: caml_js_to_string const
-//Requires: MlString
+//Requires: MlWrappedString
 function caml_js_to_string(s) { return new MlWrappedString(s); }
 //Provides: caml_js_from_array mutable
 function caml_js_from_array(a) { return a.slice(1); }
@@ -3262,6 +3674,7 @@ function caml_js_equals (x, y) { return +(x == y); }
 //Provides: caml_js_from_byte_string mutable
 function caml_js_from_byte_string (s) {return s.getFullBytes();}
 //Provides: caml_js_to_byte_string const
+//Requires: MlString
 function caml_js_to_byte_string (s) {return new MlString (s);}
 
 //Provides: caml_js_eval
