@@ -1,12 +1,7 @@
-JSOO = /home/andyman/dev/tools/ocaml/js_of_ocaml-1.4
-
 NAME=iocaml
 OBJS=iocaml.cmo iocaml_main.cmo
 
 all: $(NAME).js
-
-include $(JSOO)/Makefile.conf
--include $(JSOO)/Makefile.local
 
 ifeq ($(shell ocamlc -v | grep -q "version 4"; echo $$?),0)
 OCAMLLIB=ocamlcommon.cma ocamlbytecomp.cma ocamltoplevel.cma
@@ -14,13 +9,13 @@ else
 OCAMLLIB=toplevellib.cma
 endif
 
-COMP=$(JSOO)/compiler/$(COMPILER)
+COMP=js_of_ocaml
 JSFILES= \
 	runtime.js \
-	$(JSOO)/runtime/weak.js \
-	toplevel_runtime.js
-OCAMLC=ocamlfind ocamlc -package lwt,str -pp "camlp4o $(JSOO)/lib/syntax/pa_js.cmo" -I +compiler-libs -I $(JSOO)/lib -I $(JSOO)/compiler
-STDLIB= $(JSOO)/lib/$(LIBNAME).cma $(JSOO)/compiler/compiler.cma $(OCAMLLIB)
+	$(shell ocamlfind query js_of_ocaml)/weak.js \
+	toplevel_runtime.js 
+OCAMLC=ocamlfind ocamlc -package lwt,str -syntax camlp4o -package js_of_ocaml.syntax,compiler-libs,js_of_ocaml_compiler,js_of_ocaml
+STDLIB=$(OCAMLLIB)
 EXPUNGE=$(shell ocamlc -where)/expunge
 # Removed gc and sys
 STDLIB_MODULES=\
@@ -100,23 +95,18 @@ EXTRA_INCLUDES = \
 #toplevel.byte: $(OBJS:cmx=cmo) toplevel.cmo
 #	ocamlfind ocamlc -linkall -g -package str -linkpkg toplevellib.cma -o $@.tmp $^
 
-$(NAME).js: $(NAME).byte $(COMP) $(JSFILES)
-	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -noruntime \
+$(NAME).js: $(NAME).byte $(JSFILES)
+	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -noruntime -pretty \
 		$(EXTRA_INCLUDES) \
 		$(JSFILES) $(NAME).byte $(OPTIONS)
 
-$(NAME).byte: iocaml.cmi $(OBJS) $(JSOO)/compiler/compiler.cma
+$(NAME).byte: iocaml.cmi $(OBJS) 
 	$(OCAMLC) -linkall -package str,lwt -linkpkg -o $@.tmp $(STDLIB) $(OBJS)
 	$(EXPUNGE) $@.tmp $@ $(PERVASIVES) $(EXTRA_MODULES)
 	rm -f $@.tmp
 
 %.cmo: %.ml
 	$(OCAMLC) -c $<
-
-%.cmi: $(JSOO)/compiler/compiler.cma
-
-$(JSOO)/compiler/compiler.cma:
-	$(MAKE) -C $(JSOO)/compiler compiler.cma
 
 errors.cmi: errors.mli
 	$(OCAMLC) -c $<
@@ -134,7 +124,7 @@ install:
 	cp -r static `ipython locate profile iocamljs`
 
 # static dependancies guff
-toplevel.cmo: errors.cmi $(JSOO)/compiler/driver.cmi 
+toplevel.cmo: errors.cmi
 iocaml_main.cmo: iocaml.cmi
 iocaml.cmo: iocaml.cmi
 
