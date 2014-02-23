@@ -19,6 +19,7 @@
  *)
 
 open Js
+open Compiler
 
 module PatchCompile = struct
 
