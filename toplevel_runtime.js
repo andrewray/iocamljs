@@ -54,7 +54,10 @@ function caml_realloc_global (len) {
 
 
 /////////////////////////////////////////////////////////////////////////
-
+// If we could get access to toplevel_runtime.js from the js_of_ocaml
+// installation sensibly we could move the following functions to
+// another file and link to the packaged version.  Unfortunately it
+// doesn't seem to be installed at this point.
 
 // send mime_type display message
 function caml_ml_display(mime_type, data) {
