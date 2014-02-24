@@ -197,6 +197,11 @@ $([IPython.events]).on('app_initialized.NotebookApp', function(){
             this.pager_element.find(".container").append($('<div/>')
                 .html(IPython.utils.autoLinkUrls(text)));
         };
+
+    // replace the image
+    var img = $('.container img')[0]
+    img.src = "/static/custom/iocamljsnblogo.png"
+
 });
 
 /*
