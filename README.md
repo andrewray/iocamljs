@@ -18,19 +18,26 @@ ipython notebook --profile=iocamljs
 
 ## Building
 
-To build the code you need to download and build the source tarball of js-of-ocaml.  Edit the
-top of the Makefile to point to it.
+To build the code you need to use the latest trunk version of `js_of_ocaml`.  You can
+either manually install it, or use OPAM to pin the latest version.
 
-_You might need to compile this with the version of js-of-ocaml built from the tarball._
+```
+opam pin js_of_ocaml git://github.com/ocsigen/js_of_ocaml
+opam install js_of_ocaml
+```
+
+Once that is finished, you can rebuild the JavaScript by:
 
 ```
 make
 make install
 ```
 
-The install command will cat together some javascript files, put the resulting kernel in
-`static/services/kernels/js/kernel.js` then copy the `static` directory tree to
-the `iocamljs` profile.
+The install command will cat together some JavaScript files, put the resulting
+kernel in `static/services/kernels/js/kernel.js`, and then copy the `static`
+directory tree to the `iocamljs` profile.
 
-_Watch out for the browser caching old versions of the javascript code (including from other ipython profiles) - in Chrome reload the page with ctrl-shift-r._
+_Watch out for the browser caching old versions of the JavaScript code
+(including from other ipython profiles) - in Chrome reload the page with
+ctrl-shift-r._
 
