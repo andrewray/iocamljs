@@ -235,10 +235,8 @@ let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () =
             |]
 
 let main () = 
-    let iocaml : iocaml Js.t = 
-        let _ = Js.Unsafe.eval_string "iocaml = {};" in (* is there a proper way to do this? *)
-        Js.Unsafe.variable "iocaml"
-    in
+    (* iocaml variable is now in kernel.js *)
+    let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" in
     Firebug.console##log (Js.string "iocamljs");
     Sys.interactive := false;
     Toploop.set_paths();

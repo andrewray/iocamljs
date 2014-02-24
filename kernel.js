@@ -17,6 +17,8 @@
  * @submodule Kernel
  */
 
+iocaml = {};
+
 var IPython = (function (IPython) {
 
     var utils = IPython.utils;

@@ -55,44 +55,24 @@ function caml_realloc_global (len) {
 
 /////////////////////////////////////////////////////////////////////////
 
-/// In case the user tries to perform some I/Os...
 
+// send mime_type display message
 function caml_ml_display(mime_type, data) {
     IPython.notebook.kernel.send_mime(mime_type, data);
 }
+
+// clear display
 function caml_ml_clear_display(wait,stdout,stderr,other) {
     IPython.notebook.kernel.send_clear(wait,stdout,stderr,other);
 }
 
-//Provides: caml_sys_exit
-//Requires: caml_invalid_argument
-function caml_sys_exit () {
-  caml_invalid_argument("Function 'exit' not implemented");
+// print to stdout
+function js_print_stdout(s) { 
+    IPython.notebook.kernel.send_stdout_message(s.toString(), "stdout"); 
 }
 
-//Provides: caml_ml_output
-function caml_ml_output (x, s, p, l) {
-    if (x == 1) IPython.notebook.kernel.send_stdout_message(s.toString().slice(p,p+l), "stdout");
-    if (x == 2) IPython.notebook.kernel.send_stdout_message(s.toString().slice(p,p+l), "stderr");
-    /* otherwise ignore */
-    return 0;
-}
-
-//Provides: caml_ml_output_char
-//Requires: caml_ml_output
-function caml_ml_output_char (x, c) {
-    return caml_ml_output (x, String.fromCharCode (c), 0, 1);
-}
-
-//Provides: caml_raise_end_of_file
-//Requires: caml_raise_constant, caml_global_data
-function caml_raise_end_of_file () {
-  caml_raise_constant(caml_global_data[5]);
-}
-
-//Provides: caml_ml_input_char
-//Requires: caml_raise_end_of_file
-function caml_ml_input_char (f) {
-  caml_raise_end_of_file ();
+// print to stderr
+function js_print_stderr(s) { 
+    IPython.notebook.kernel.send_stdout_message(s.toString(), "stderr"); 
 }
 
