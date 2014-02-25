@@ -1,14 +1,24 @@
 # IOCamlJS 
 
-The OCaml toplevel compiled to javascript and interfaced to the IPython notebook.
+IOCamlJS runs a (compiled-to-javascript) OCaml REPL in the IPython notebook.
+`stdout` and `stderr` are redirected to the notebook interface so 
+`printf` works as expected.  The `js_of_ocaml` and `lwt` syntax 
+extensions are enabled.
 
-___This is very much a prototype currently and requires a lot more work___
+Only a small API for interacting with the notebook is provided by `iocamljs` at 
+the moment; `js_of_ocaml` provides far greater possibilities.
 
-Basic code execution and writing to stdout and stderr are working at the moment.
+The demo notebook `js_of_ocaml-webgl-demo.ipynb` provides a good example of whats 
+can be done.  Its an almost directly copy of the 
+[js_of_ocaml WebGL demo](http://ocsigen.org/js_of_ocaml/files/webgl/index.html) except
+the 3d model, shader code, ocaml code and html code are all embedded in the notebook
+and can be compiled and run live in the browser.
 
 ## To run the code
 
-The javascript required to run the code is included in the repository.
+The javascript required to run the code is included in the repository.  Nothing needs
+to be compiled - just do the following (assuming you have IPython 1.1 installed, otherwise
+see [iocaml](https://github.com/andrewray/iocaml) for help).
 
 ```
 ipython profile create iocamljs
@@ -18,6 +28,10 @@ ipython notebook --profile=iocamljs
 
 ## Building
 
+__Watch out for the browser caching old versions of JavaScript code
+(including from other ipython profiles) - in Chrome reload the page with
+ctrl-shift-r.__
+
 To build the code you need to use the latest trunk version of `js_of_ocaml`.  You can
 either manually install it, or use OPAM to pin the latest version.
 
@@ -26,18 +40,29 @@ opam pin js_of_ocaml git://github.com/ocsigen/js_of_ocaml
 opam install js_of_ocaml
 ```
 
-Once that is finished, you can rebuild the JavaScript by:
+Once that is finished, you can rebuild the JavaScript with:
 
 ```
 make
+```
+
+which creates `static/services/kernels/js/kernel.js` and
+
+```
 make install
 ```
 
-The install command will cat together some JavaScript files, put the resulting
-kernel in `static/services/kernels/js/kernel.js`, and then copy the `static`
-directory tree to the `iocamljs` profile.
+which then copies the `static` directory tree to the `iocamljs` profile.
 
-_Watch out for the browser caching old versions of the JavaScript code
-(including from other ipython profiles) - in Chrome reload the page with
-ctrl-shift-r._
+To add the syntax extensions you should build
+
+```
+make js_toplevel
+```
+
+## Adding libraries
+
+It is possible to add other (pure) OCaml libraries and syntax extensions
+to the build process and make them available to the REPL.  It's a little 
+bit involved at the moment but hopefully it will improve.
 
