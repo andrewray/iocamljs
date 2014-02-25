@@ -93,7 +93,8 @@ EXTRA_INCLUDES = \
 	`ocamlfind query lwt -i-format` \
 
 PREPROCESSORS = \
-	`ocamlfind query js_of_ocaml -i-format` pa_js.cmo
+	`ocamlfind query js_of_ocaml -i-format` pa_js.cmo \
+	`ocamlfind query lwt -i-format` lwt-syntax-options.cma lwt-syntax.cma
 
 #toplevel.byte: $(OBJS:cmx=cmo) toplevel.cmo
 #	ocamlfind ocamlc -linkall -g -package str -linkpkg toplevellib.cma -o $@.tmp $^

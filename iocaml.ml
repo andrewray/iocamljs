@@ -244,6 +244,7 @@ module Exec = struct
 
     let run_cell_camlp4 execution_count code = 
         let cell_name = "["^string_of_int execution_count^"]" in
+        Buffer.clear buffer;
         Location.input_name := cell_name;
         let success =
             try begin
