@@ -59,6 +59,11 @@ function caml_realloc_global (len) {
 // another file and link to the packaged version.  Unfortunately it
 // doesn't seem to be installed at this point.
 
+// missing?
+function caml_ml_register_file(name,content) {
+    joo_register_file(name,content)
+}
+
 // send mime_type display message
 function caml_ml_display(mime_type, data) {
     IPython.notebook.kernel.send_mime(mime_type, data);
@@ -70,12 +75,12 @@ function caml_ml_clear_display(wait,stdout,stderr,other) {
 }
 
 // print to stdout
-function js_print_stdout(s) { 
+function my_js_print_stdout(s) { 
     IPython.notebook.kernel.send_stdout_message(s.toString(), "stdout"); 
 }
 
 // print to stderr
-function js_print_stderr(s) { 
+function my_js_print_stderr(s) { 
     IPython.notebook.kernel.send_stdout_message(s.toString(), "stderr"); 
 }
 

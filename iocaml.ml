@@ -150,6 +150,42 @@ class type iocaml = object
     method execute : (int -> js_string t -> iocaml_result t) writeonly_prop
 end
 
+module Preprocessor = struct
+
+    open Format
+
+    module Ast2pt = Camlp4.Struct.Camlp4Ast2OCamlAst.Make(Camlp4.PreCast.Syntax.Ast)
+
+    module CleanAst = Camlp4.Struct.CleanAst.Make(Camlp4.PreCast.Syntax.Ast)
+
+    let print_warning = eprintf "%a:\n%s@." Camlp4.PreCast.Syntax.Loc.print
+
+    let init_camlp4 = lazy (
+      Camlp4.Register.iter_and_take_callbacks
+        (fun (name, callback)-> callback ())
+    )
+
+    let implementation_file filename code =
+      Lazy.force init_camlp4;
+      let cs = Stream.of_string code in
+      let loc = Camlp4.PreCast.Syntax.Loc.mk filename in
+      Camlp4.PreCast.Syntax.current_warning := print_warning;
+      let ast = 
+        try 
+          Camlp4.Register.CurrentParser.parse_implem loc cs
+        with 
+          Camlp4.PreCast.Syntax.Loc.Exc_located(loc, exc) -> 
+            raise exc
+        | x ->
+            raise x
+      in
+      let ast = Camlp4.PreCast.AstFilters.fold_implem_filters (fun t filter -> filter t) ast in
+      let ast = (new CleanAst.clean_ast)#str_item ast in
+      let ast : Parsetree.structure = Obj.magic (Ast2pt.str_item ast) in
+      Parsetree.Ptop_def(ast)
+
+end
+
 module Exec = struct
 
     let buffer = Buffer.create 4096
@@ -200,13 +236,29 @@ module Exec = struct
         in
         success
 
-    let run_cell execution_count code = run_cell_lb execution_count 
-        (* little hack - make sure code ends with a '\n' otherwise the
-         * error reporting isn't quite right *)
-        Lexing.(from_string (code ^ "\n"))
+    let run_cell execution_count code = 
+        run_cell_lb execution_count 
+            (* little hack - make sure code ends with a '\n' otherwise the
+             * error reporting isn't quite right *)
+            Lexing.(from_string (code ^ "\n"))
+
+    let run_cell_camlp4 execution_count code = 
+        let cell_name = "["^string_of_int execution_count^"]" in
+        Location.input_name := cell_name;
+        let success =
+            try begin
+                let ph = Preprocessor.implementation_file cell_name code in
+                if not (Toploop.execute_phrase true formatter ph) then raise Exit;
+                true
+            end with
+            | Exit -> false
+            | Sys.Break -> (Format.fprintf formatter "Interrupted.@."; false)
+            | x -> report_error x
+        in
+        success
 
     let execute execution_count str = 
-        let status = run_cell execution_count (Js.to_string str) in
+        let status = run_cell_camlp4 execution_count (Js.to_string str) in
         let v : iocaml_result t = Js.Unsafe.obj [||] in
         v##message <- string (Buffer.contents buffer);
         v##compilerStatus <- bool status;

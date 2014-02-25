@@ -11,6 +11,7 @@ endif
 
 COMP=js_of_ocaml
 JSFILES= \
+	runtime.js \
 	$(shell ocamlfind query js_of_ocaml)/weak.js \
 	toplevel_runtime.js 
 OCAMLC=ocamlfind ocamlc -package lwt,str -syntax camlp4o -package js_of_ocaml.syntax,compiler-libs,js_of_ocaml_compiler,js_of_ocaml
@@ -91,16 +92,21 @@ EXTRA_INCLUDES = \
 	`ocamlfind query js_of_ocaml -i-format` \
 	`ocamlfind query lwt -i-format` \
 
+PREPROCESSORS = \
+	`ocamlfind query js_of_ocaml -i-format` pa_js.cmo
+
 #toplevel.byte: $(OBJS:cmx=cmo) toplevel.cmo
 #	ocamlfind ocamlc -linkall -g -package str -linkpkg toplevellib.cma -o $@.tmp $^
 
 $(NAME).js: $(NAME).byte $(JSFILES)
-	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -pretty \
+	$(COMP) -I $(shell ocamlc -where)/compiler-libs -toplevel -noinline -noruntime -pretty \
 		$(EXTRA_INCLUDES) \
 		$(JSFILES) $(NAME).byte $(OPTIONS)
 
 $(NAME).byte: iocaml.cmi $(OBJS) 
-	$(OCAMLC) -linkall -package str,lwt -linkpkg -o $@.tmp $(STDLIB) $(OBJS)
+	$(OCAMLC) -linkall -package str,lwt,dynlink -I +camlp4 -linkpkg -o $@.tmp $(STDLIB) \
+		camlp4o.cma $(PREPROCESSORS) \
+		$(OBJS)
 	$(EXPUNGE) $@.tmp $@ $(PERVASIVES) $(EXTRA_MODULES)
 	rm -f $@.tmp
 
