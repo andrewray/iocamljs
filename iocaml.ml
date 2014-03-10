@@ -21,6 +21,16 @@
 open Js
 open Compiler
 
+let jsoo_debug_on () = 
+    (*Option.Debug.set "shortvar";*)
+    Option.Debug.set "gen";
+    Option.Debug.set "parser";
+    Option.Debug.set "deadcode";
+    Option.Debug.set "main";
+    Option.Debug.set "linker";
+    Option.Debug.set "flow";
+    Option.Debug.set "times"
+
 module PatchCompile = struct
 
     let split_primitives p =
@@ -42,11 +52,7 @@ module PatchCompile = struct
     let g = global_data ()
 
     let _ = (* patch the compile method *)
-    (*
-      Util.set_debug "parser";
-      Util.set_debug "deadcode";
-      Util.set_debug "main";
-    *)
+    
         let toc = g##toc in
         let prims = split_primitives (List.assoc "PRIM" toc) in
 
@@ -55,6 +61,9 @@ module PatchCompile = struct
             let output_program = Driver.from_string prims s in
             let b = Buffer.create 100 in
             output_program (Pretty_print.to_buffer b);
+            Format.(pp_print_flush std_formatter ());
+            Format.(pp_print_flush err_formatter ());
+            flush stdout; flush stderr;
             Buffer.contents b
         in
         g##compile <- compile; (*XXX HACK!*)
@@ -286,6 +295,77 @@ let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () =
                 Js.Unsafe.inject stderr;
                 Js.Unsafe.inject other;
             |]
+
+let load_from_server path = 
+    let xml = XmlHttpRequest.create () in
+    let () = xml##_open(Js.string "GET", Js.string ("file/" ^ path), Js._false) in
+    let () = xml##send(Js.null) in
+    if xml##status = 200 then
+        let resp = xml##responseText in
+        let len = resp##length in
+        let str = String.create len in
+        for i=0 to len-1 do
+            str.[i] <- Char.chr (int_of_float resp##charCodeAt(i) land 0xff)
+        done;
+        Some(str)
+    else
+        None
+
+let dir_load path = 
+    Topdirs.dir_load Format.std_formatter path
+
+
+exception Load_failed
+
+let check_consistency ppf filename cu =
+    let open Cmo_format in
+    try
+        List.iter
+            (fun (name, crc) -> Consistbl.check Env.crc_units name crc filename)
+            cu.cu_imports
+        with Consistbl.Inconsistency(name, user, auth) ->
+            Format.fprintf ppf "@[<hv 0>The files %s@ and %s@ \
+                                disagree over interface %s@]@."
+                                user auth name;
+            raise Load_failed
+
+let load_comp_unit filename ppf ic = 
+    let buffer = Misc.input_bytes ic (String.length Config.cmo_magic_number) in
+    if buffer = Config.cmo_magic_number then begin
+        
+        let open Cmo_format in
+        let open Toploop in
+
+        let compunit_pos = input_binary_int ic in  (* Go to descriptor *)
+        seek_in ic compunit_pos;
+        let compunit : compilation_unit = input_value ic in
+
+        check_consistency ppf filename compunit;
+        seek_in ic compunit.cu_pos;
+        let code_size = compunit.cu_codesize + 8 in
+        let code = Meta.static_alloc code_size in
+        unsafe_really_input ic code 0 compunit.cu_codesize;
+        String.unsafe_set code compunit.cu_codesize (Char.chr Opcodes.opRETURN);
+        String.unsafe_blit "\000\000\000\001\000\000\000" 0
+        code (compunit.cu_codesize + 1) 7;
+        let initial_symtable = Symtable.current_state() in
+        Symtable.patch_object code compunit.cu_reloc;
+        Symtable.update_global_table();
+
+        begin try
+            may_trace := true;
+            ignore((Meta.reify_bytecode code code_size) ());
+            may_trace := false;
+        with exn ->
+            may_trace := false;
+            Symtable.restore_state initial_symtable;
+            print_exception_outcome ppf exn;
+            raise Load_failed
+        end;
+
+        "ok"
+    end else
+        "bad cmo magic number"
 
 let main () = 
     (* iocaml variable is now in kernel.js *)

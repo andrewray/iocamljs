@@ -84,3 +84,129 @@ function my_js_print_stderr(s) {
     IPython.notebook.kernel.send_stdout_message(s.toString(), "stderr"); 
 }
 
+//Provides: caml_ml_pos_in
+function caml_ml_pos_in(chan) {
+    return chan.data.offset;
+}
+
+//Provides: caml_ml_pos_out
+function caml_ml_pos_out(chan) {
+    return chan.data.offset;
+}
+
+//Provides: caml_ml_seek_in
+function caml_ml_seek_in(chan, pos) {
+    chan.data.offset = pos;
+}
+
+//Provides: caml_ml_seek_out
+function caml_ml_seek_out(chan, pos) {
+    chan.data.offset = pos;
+}
+
+//Provides: caml_dynlink_add_primitive
+//Requires: caml_failwith
+function caml_dynlink_add_primitive() { caml_failwith("caml_dynlink_add_primitive"); }
+
+//Provides: caml_dynlink_lookup_symbol
+//Requires: caml_failwith
+function caml_dynlink_lookup_symbol() { caml_failwith("caml_dynlink_lookup_symbol"); }
+
+//Provides: caml_dynlink_open_lib
+//Requires: caml_failwith
+function caml_dynlink_open_lib() { caml_failwith("caml_dynlink_open_lib"); }
+
+//Provides: caml_gc_full_major
+//Requires: caml_failwith
+function caml_gc_full_major() { caml_failwith("caml_gc_full_major"); }
+
+//Provides: caml_get_current_environment
+//Requires: caml_failwith
+function caml_get_current_environment() { caml_failwith("caml_get_current_environment"); }
+
+//Provides: caml_install_signal_handler
+//Requires: caml_failwith
+function caml_install_signal_handler() { caml_failwith("caml_install_signal_handler"); }
+
+//Provides: caml_invoke_traced_function
+//Requires: caml_failwith
+function caml_invoke_traced_function() { caml_failwith("caml_invoke_traced_function"); }
+
+//Provides: caml_md5_chan
+//Requires: caml_failwith
+function caml_md5_chan() { caml_failwith("caml_md5_chan"); }
+
+//Provides: caml_ml_input_int
+//Requires: caml_ml_input_char, caml_failwith
+function caml_ml_input_int(chan) {
+    var a, b, c, d;
+    d = caml_ml_input_char(chan);
+    c = caml_ml_input_char(chan);
+    b = caml_ml_input_char(chan);
+    a = caml_ml_input_char(chan);
+    return a + (b << 8) + (c << 16) + (d << 24);
+}
+
+//Provides: caml_ml_output_int
+//Requires: caml_failwith
+function caml_ml_output_int() { caml_failwith("caml_ml_output_int"); }
+
+//Provides: caml_ml_pos_in_64
+//Requires: caml_failwith
+function caml_ml_pos_in_64() { caml_failwith("caml_ml_pos_in_64"); }
+
+//Provides: caml_ml_pos_out_64
+//Requires: caml_failwith
+function caml_ml_pos_out_64() { caml_failwith("caml_ml_pos_out_64"); }
+
+//Provides: caml_ml_seek_in_64
+//Requires: caml_failwith
+function caml_ml_seek_in_64() { caml_failwith("caml_ml_seek_in_64"); }
+
+//Provides: caml_ml_seek_out_64
+//Requires: caml_failwith
+function caml_ml_seek_out_64() { caml_failwith("caml_ml_seek_out_64"); }
+
+//Provides: caml_ml_set_binary_mode
+//Requires: caml_failwith
+function caml_ml_set_binary_mode() { caml_failwith("caml_ml_set_binary_mode"); }
+
+//Provides: caml_output_value
+//Requires: caml_failwith
+function caml_output_value(ch,v,fl) { 
+    var t = caml_output_value_to_string(t);
+    caml_ml_output(ch,t,0,t.getLen());
+}
+
+//Provides: caml_record_backtrace
+//Requires: caml_failwith
+function caml_record_backtrace() { caml_failwith("caml_record_backtrace"); }
+
+//Provides: caml_sys_chdir
+//Requires: caml_failwith
+function caml_sys_chdir() { caml_failwith("caml_sys_chdir"); }
+
+//Provides: caml_sys_getcwd
+//Requires: caml_failwith
+function caml_sys_getcwd() { caml_failwith("caml_sys_getcwd"); }
+
+//Provides: caml_sys_read_directory
+//Requires: caml_failwith
+function caml_sys_read_directory() { caml_failwith("caml_sys_read_directory"); }
+
+//Provides: caml_sys_system_command
+//Requires: caml_failwith
+function caml_sys_system_command() { caml_failwith("caml_sys_system_command"); }
+
+//Provides: caml_terminfo_backup
+//Requires: caml_failwith
+function caml_terminfo_backup() { caml_failwith("caml_terminfo_backup"); }
+
+//Provides: caml_terminfo_resume
+//Requires: caml_failwith
+function caml_terminfo_resume() { caml_failwith("caml_terminfo_resume"); }
+
+//Provides: caml_terminfo_standout
+//Requires: caml_failwith
+function caml_terminfo_standout() { caml_failwith("caml_terminfo_standout"); }
+
