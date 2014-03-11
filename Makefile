@@ -26,19 +26,10 @@
 #
 # 1. PACKAGES - a set of ocamlfind packages
 # 2. SYNTAX - a set of ocamlfind syntax extensions
-# 3. EXPUNGE - module names to remove
+# 3. MODULES - module names to keep
 #
 # Note that the syntax extensions are not run here, they are linked
-# into the toplevel.  Unforuntately there is no easy way to find the
-# module names these things define and they must be expunged from the
-# top level (mainly because synyax extensions are generally not packaged
-# with their .cmi files which, unusually, js_of_ocaml would need).
-#
-# For example, to add js_of_ocaml it's syntax extensions use
-#
-# make all PACKAGES="js_of_ocaml" \
-# 		   SYNTAX="js_of_ocaml.syntax" \
-#          EXPUNGE="Pa_js"
+# into the toplevel.  
 #
 # Note; to specify more than one package separate with spaces
 #
@@ -65,14 +56,18 @@ COMPILER_LIBS=ocamlcommon.cma ocamlbytecomp.cma ocamltoplevel.cma
 COMPILER_LIBS_INC=$(shell ocamlfind query -i-format compiler-libs)
 
 # Camlp4 libs
-CAMLP4_LIBS=camlp4o.cma
+ifeq ($(CAMLP4),1)
+CAMLP4_LIBS=camlp4o.cma Camlp4Top.cmo
 CAMLP4_LIBS_INC=$(shell ocamlfind query -i-format camlp4)
+else
+CAMLP4_LIBS=
+CAMLP4_LIBS_INC=
+endif
 
 # ocamlfind packages.
 STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml_compiler
 ifneq ($(PACKAGES),)
 USER_PACKAGES=$(foreach p,$(PACKAGES),-package $(p))
-#USER_PACKAGES_INC=$(foreach p,$(PACKAGES),`ocamlfind query -i-format $(p)`)
 USER_PACKAGES_INC=$(foreach p,$(PACKAGES),`ocamlfind query -i-format $(p) -r | awk '{ printf $$0 " "}'`)
 endif
 
@@ -82,86 +77,49 @@ SYNTAX_LIB=$(foreach s,$(SYNTAX),`ocamlfind query -predicates syntax,toploop,pre
 SYNTAX_INC=$(foreach s,$(SYNTAX),`ocamlfind query -i-format $(s)`)
 endif
 
-# compiler modules to be expunged
-# this was found by a modified expunge util which printed everything it
-# got rid of in a run where it was keeping specific modules.
-EXPUNGE_COMPILER=\
-Annot Ast_mapper Asttypes Btype Bytegen Bytelibrarian Bytelink Bytepackager Bytesections \
-Camlp4 Camlp4_config Camlp4.Debug Camlp4.ErrorHandler Camlp4_import Camlp4.OCamlInitSyntax \
-Camlp4OCamlParser Camlp4OCamlParserParser Camlp4OCamlRevisedParser Camlp4OCamlRevisedParserParser \
-Camlp4.Options Camlp4.PreCast Camlp4.Printers Camlp4.Printers.DumpCamlp4Ast \
-Camlp4.Printers.DumpOCamlAst Camlp4.Printers.Null Camlp4.Printers.OCaml Camlp4.Printers.OCamlr \
-Camlp4.Register Camlp4.Sig Camlp4.Struct Camlp4.Struct.AstFilters Camlp4.Struct.Camlp4Ast \
-Camlp4.Struct.Camlp4Ast2OCamlAst Camlp4.Struct.CleanAst Camlp4.Struct.CommentFilter \
-Camlp4.Struct.DynAst Camlp4.Struct.DynLoader Camlp4.Struct.EmptyError Camlp4.Struct.EmptyPrinter \
-Camlp4.Struct.FreeVars Camlp4.Struct.Grammar Camlp4.Struct.Grammar.Delete \
-Camlp4.Struct.Grammar.Dynamic Camlp4.Struct.Grammar.Entry Camlp4.Struct.Grammar.Failed \
-Camlp4.Struct.Grammar.Find Camlp4.Struct.Grammar.Fold Camlp4.Struct.Grammar.Insert \
-Camlp4.Struct.Grammar.Parser Camlp4.Struct.Grammar.Print Camlp4.Struct.Grammar.Search \
-Camlp4.Struct.Grammar.Static Camlp4.Struct.Grammar.Structure Camlp4.Struct.Grammar.Tools \
-Camlp4.Struct.Lexer Camlp4.Struct.Loc Camlp4.Struct.Quotation Camlp4.Struct.Token \
-Ccomp Clflags Cmi_format Cmo_format Cmt_format Compenv Compile Compiler Compiler.Annot_lexer \
-Compiler.Annot_parser Compiler.Code Compiler.Deadcode Compiler.Dgraph Compiler.Driver \
-Compiler.Eval Compiler.Flow Compiler.Freevars Compiler.Generate Compiler.Inline Compiler.Instr \
-Compiler.Javascript Compiler.Js_assign Compiler.Js_lexer Compiler.Js_output Compiler.Js_parser \
-Compiler.Js_simpl Compiler.Js_token Compiler.Js_traverse Compiler.Linker Compiler.Option \
-Compiler.Parse_bytecode Compiler.Parse_info Compiler.Parse_js Compiler.Phisimpl \
-Compiler.Pretty_print Compiler.Primitive Compiler.Pure_fun Compiler.Reserved Compiler.Source_map \
-Compiler.Specialize Compiler.Specialize_js Compiler.Subst Compiler.Tailcall Compiler.Util \
-Compiler.VarPrinter Compiler.Vlq64 Compmisc Config Consistbl CSS Ctype Datarepr Dll \
-Dynlink Dynlinkaux Dynlinkaux.Btype Dynlinkaux.Bytesections Dynlinkaux.Clflags \
-Dynlinkaux.Cmi_format Dynlinkaux.Config Dynlinkaux.Consistbl Dynlinkaux.Datarepr \
-Dynlinkaux.Dll Dynlinkaux.Env Dynlinkaux.Ident Dynlinkaux.Instruct Dynlinkaux.Lambda \
-Dynlinkaux.Location Dynlinkaux.Longident Dynlinkaux.Meta Dynlinkaux.Misc Dynlinkaux.Opcodes \
-Dynlinkaux.Path Dynlinkaux.Predef Dynlinkaux.Primitive Dynlinkaux.Runtimedef Dynlinkaux.Subst \
-Dynlinkaux.Symtable Dynlinkaux.Tbl Dynlinkaux.Terminfo Dynlinkaux.Types Dynlinkaux.Warnings \
-Emitcode Env Envaux Errors Findlib Findlib_config Fl_args Fl_meta Fl_metascanner Fl_metatoken \
-Fl_package_base Fl_split Fl_topo Gc Genprintval Ident Includeclass Includecore Includemod \
-Instruct Iocaml_main Keycode Lambda Lexer Location Longident Lwt_util Main_args \
-Matching Meta Misc Mtype Opcodes Oprint Parmatch Parse Parser Parsetree Path Pparse \
-Pprintast Predef Primitive Printast Printinstr Printlambda Printtyp Printtyped Runtimedef \
-Simplif Std_exit Str Stypes Subst Switch Symtable Syntaxerr Sys Tbl Terminfo Top Topmain \
-Trace Translclass Translcore Translmod Translobj Typeclass Typecore Typedecl Typedtree \
-TypedtreeIter TypedtreeMap Typemod Typeopt Types Typetexp Warnings
+
+KEEP_COMPILER=\
+Arg Array ArrayLabels Buffer Callback CamlinternalLazy CamlinternalMod CamlinternalOO \
+Char Complex Digest Dynlink Filename Format Genlex Hashtbl Int32 Int64 Lazy Lexing \
+List ListLabels Map Marshal MoreLabels Nativeint Obj Oo Parsing Pervasives Printexc \
+Printf Queue Random Scanf Set Sort Stack StdLabels Stream String StringLabels Sys Weak
+
+# camlp4
+ifeq ($(CAMLP4),1)
+KEEP_CAMLP4=Camlp4 Camlp4_config Camlp4_import Camlp4Top
+endif
+
+# lwt
+ifeq ($(LWT),1)
+KEEP_LWT=\
+Lwt Lwt_condition Lwt_list Lwt_mutex Lwt_mvar Lwt_pool \
+Lwt_pqueue Lwt_sequence Lwt_stream Lwt_switch
+LWT_INCLUDE=`ocamlfind query -i-format lwt`
+endif
+
+# js_of_ocaml
+# if this is included, we can also include Iocaml
+ifeq ($(JSOO),1)
+KEEP_JSOO=\
+CSS Dom Dom_events Dom_html Event_arrows File Firebug Form Js \
+Json Lwt_js Lwt_js_events Regexp Sys_js Typed_array Url \
+WebGL WebSockets XmlHttpRequest \
+Iocaml
+JSOO_INCLUDE=`ocamlfind query -i-format js_of_ocaml`
+endif
+
+KEEP_TOP=Outcometree Topdirs Toploop 
+
+KEEP_MODULES=$(KEEP_COMPILER) $(KEEP_CAMLP4) $(KEEP_LWT) $(KEEP_JSOO) $(KEEP_TOP)
 
 #######################################################################
 # main build targets
 all: static/services/kernels/js/kernel.js
 
-js_toplevel:
+full:
 	make all \
-		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax" \
-		EXPUNGE="Pa_js Pa_lwt_options Pa_lwt"
-
-# ... neither of these work ...
-
-# requires external pcre_ocaml_init
-tyxml_toplevel:
-	make clean all \
-		PACKAGES="pcre netsys netstring tyxml" \
-		SYNTAX="tyxml.syntax" \
-		EXPUNGE="Pa_tyxml pa_tyxml.Basic_types pa_tyxml.Camllexer pa_tyxml.Xhtmlparser pa_tyxml.Xhtmlsyntax pa_tyxml.Xmllexer"
-
-# Bigarray.create: unsupported layout
-cow_toplevel:
-	make clean all \
-		PACKAGES="cow" \
-		SYNTAX="type_conv dyntype.syntax cow.syntax" \
-		EXPUNGE="pa_dyntype cow.Atom cow.Code cow.Css cow.Html cow.Json cow.Markdown cow.Xhtml cow.Xml \
-		dyntype.Type dyntype.Value \
-		pa_cow pa_cow.Pa_css pa_cow.Pa_css.Location pa_cow.Pa_css.Options pa_cow.Pa_css.Parser pa_cow.Pa_css.Printer \
-		pa_cow.Pa_css.QLexer pa_cow.Pa_css.Qast pa_cow.Pa_css.Quotations \
-		pa_cow.Pa_html pa_cow.Pa_html.Extension pa_cow.Pa_html.Options pa_cow.Pa_html.Quotation pa_cow.Pa_html.Xhtml \
-		pa_cow.Pa_json pa_cow.Pa_json.Extension pa_cow.Pa_json.Json \
-		pa_cow.Pa_xml pa_cow.Pa_xml.Extension pa_cow.Pa_xml.Location pa_cow.Pa_xml.Options pa_cow.Pa_xml.Parser \
-		pa_cow.Pa_xml.Printer pa_cow.Pa_xml.Qast pa_cow.Pa_xml.Quotation pa_cow.Pa_xml.Xml pa_cow.Pp_cow \
-		pa_dyntype.P4_helpers pa_dyntype.P4_type pa_dyntype.P4_value \
-		pa_dyntype.Pa_type pa_dyntype.Pa_value \
-		sexplib sexplib.Conv sexplib.Conv_error sexplib.Exn_magic sexplib.Lexer sexplib.Macro \
-		sexplib.Parser sexplib.Parser_with_layout sexplib.Path sexplib.Pre_sexp sexplib.Sexp sexplib.Sexp_intf \
-		sexplib.Sexp_with_layout sexplib.Src_pos sexplib.Std sexplib.Type sexplib.Type_with_layout \
-		uri_IP \
-		"
+		CAMLP4=1 LWT=1 JSOO=1 \
+		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax" 
 
 #######################################################################
 # build
@@ -189,16 +147,16 @@ iocaml_full.byte: iocaml.cmo iocaml_main.cmo
 		iocaml.cmo iocaml_main.cmo
 
 iocaml.byte: iocaml_full.byte 
-	`ocamlc -where`/expunge iocaml_full.byte iocaml.byte -v \
-		$(EXPUNGE_COMPILER) $(EXPUNGE)
+	`ocamlc -where`/expunge iocaml_full.byte iocaml.byte \
+		$(KEEP_MODULES) $(MODULES)
 
 iocaml.js: iocaml.byte $(JS_FILES)
 	js_of_ocaml -toplevel -noruntime $(JS_OF_OCAML_OPTS) \
-		`ocamlfind query -i-format js_of_ocaml` \
-		`ocamlfind query -i-format lwt` \
 		$(USER_PACKAGES_INC) \
-		$(SYNTAX_INC) \
-		-I . $(COMPILER_LIBS_INC) $(JS_FILES) iocaml.byte
+		$(SYNTAX_INC) $(CAMLP4_LIBS_INC) \
+		-I . $(COMPILER_LIBS_INC) $(JS_FILES) \
+		$(JSOO_INCLUDE) $(LWT_INCLUDE) \
+		iocaml.byte
 
 # main target
 static/services/kernels/js/kernel.js: kernel.js iocaml.js
@@ -208,8 +166,12 @@ static/services/kernels/js/kernel.js: kernel.js iocaml.js
 #######################################################################
 # install
 
+#uninstall:
+#	ocamlfind remove iocamljs
+
 install:
 	cp -r static `ipython locate profile iocamljs`
+#	ocamlfind install iocamljs META iocaml.cmi
 
 clean::
 	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 

@@ -21,15 +21,11 @@
 open Js
 open Compiler
 
-let jsoo_debug_on () = 
+let jsoo_debug = List.iter Option.Debug.set
+
+let jsoo_debug_all () = 
     (*Option.Debug.set "shortvar";*)
-    Option.Debug.set "gen";
-    Option.Debug.set "parser";
-    Option.Debug.set "deadcode";
-    Option.Debug.set "main";
-    Option.Debug.set "linker";
-    Option.Debug.set "flow";
-    Option.Debug.set "times"
+    jsoo_debug ["gen"; "parser"; "deadcode"; "main"; "linker"; "flow"; "times" ]
 
 module PatchCompile = struct
 
@@ -158,42 +154,20 @@ class type iocaml = object
     method name : js_string t prop
     method execute : (int -> js_string t -> iocaml_result t) writeonly_prop
 end
-
-module Preprocessor = struct
-
-    open Format
-
-    module Ast2pt = Camlp4.Struct.Camlp4Ast2OCamlAst.Make(Camlp4.PreCast.Syntax.Ast)
-
-    module CleanAst = Camlp4.Struct.CleanAst.Make(Camlp4.PreCast.Syntax.Ast)
-
-    let print_warning = eprintf "%a:\n%s@." Camlp4.PreCast.Syntax.Loc.print
-
-    let init_camlp4 = lazy (
-      Camlp4.Register.iter_and_take_callbacks
-        (fun (name, callback)-> callback ())
-    )
-
-    let implementation_file filename code =
-      Lazy.force init_camlp4;
-      let cs = Stream.of_string code in
-      let loc = Camlp4.PreCast.Syntax.Loc.mk filename in
-      Camlp4.PreCast.Syntax.current_warning := print_warning;
-      let ast = 
-        try 
-          Camlp4.Register.CurrentParser.parse_implem loc cs
-        with 
-          Camlp4.PreCast.Syntax.Loc.Exc_located(loc, exc) -> 
-            raise exc
-        | x ->
-            raise x
-      in
-      let ast = Camlp4.PreCast.AstFilters.fold_implem_filters (fun t filter -> filter t) ast in
-      let ast = (new CleanAst.clean_ast)#str_item ast in
-      let ast : Parsetree.structure = Obj.magic (Ast2pt.str_item ast) in
-      Parsetree.Ptop_def(ast)
-
+(*
+class type kernel = object
+    method send_stdout_message : (js_string t -> unit) readonly_prop
+    method send_stderr_message : (js_string t -> unit) readonly_prop
+    (*method send_mime_message : (js_string t -> js_string t -> unit) prop
+    method send_clear : (bool -> bool -> bool -> bool -> unit) prop*)
 end
+class type notebook = object
+    method kernel : kernel t readonly_prop
+end
+class type _iPython = object
+    method notebook : notebook t readonly_prop
+end
+*)
 
 module Exec = struct
 
@@ -251,24 +225,9 @@ module Exec = struct
              * error reporting isn't quite right *)
             Lexing.(from_string (code ^ "\n"))
 
-    let run_cell_camlp4 execution_count code = 
-        let cell_name = "["^string_of_int execution_count^"]" in
-        Buffer.clear buffer;
-        Location.input_name := cell_name;
-        let success =
-            try begin
-                let ph = Preprocessor.implementation_file cell_name code in
-                if not (Toploop.execute_phrase true formatter ph) then raise Exit;
-                true
-            end with
-            | Exit -> false
-            | Sys.Break -> (Format.fprintf formatter "Interrupted.@."; false)
-            | x -> report_error x
-        in
-        success
-
     let execute execution_count str = 
-        let status = run_cell_camlp4 execution_count (Js.to_string str) in
+        (*let status = run_cell_camlp4 execution_count (Js.to_string str) in*)
+        let status = run_cell execution_count (Js.to_string str) in
         let v : iocaml_result t = Js.Unsafe.obj [||] in
         v##message <- string (Buffer.contents buffer);
         v##compilerStatus <- bool status;
@@ -304,74 +263,27 @@ let load_from_server path =
         let resp = xml##responseText in
         let len = resp##length in
         let str = String.create len in
-        for i=0 to len-1 do
+        for i=0 to len-1 do 
             str.[i] <- Char.chr (int_of_float resp##charCodeAt(i) land 0xff)
         done;
         Some(str)
     else
         None
 
-let dir_load path = 
-    Topdirs.dir_load Format.std_formatter path
-
-
-exception Load_failed
-
-let check_consistency ppf filename cu =
-    let open Cmo_format in
-    try
-        List.iter
-            (fun (name, crc) -> Consistbl.check Env.crc_units name crc filename)
-            cu.cu_imports
-        with Consistbl.Inconsistency(name, user, auth) ->
-            Format.fprintf ppf "@[<hv 0>The files %s@ and %s@ \
-                                disagree over interface %s@]@."
-                                user auth name;
-            raise Load_failed
-
-let load_comp_unit filename ppf ic = 
-    let buffer = Misc.input_bytes ic (String.length Config.cmo_magic_number) in
-    if buffer = Config.cmo_magic_number then begin
-        
-        let open Cmo_format in
-        let open Toploop in
-
-        let compunit_pos = input_binary_int ic in  (* Go to descriptor *)
-        seek_in ic compunit_pos;
-        let compunit : compilation_unit = input_value ic in
-
-        check_consistency ppf filename compunit;
-        seek_in ic compunit.cu_pos;
-        let code_size = compunit.cu_codesize + 8 in
-        let code = Meta.static_alloc code_size in
-        unsafe_really_input ic code 0 compunit.cu_codesize;
-        String.unsafe_set code compunit.cu_codesize (Char.chr Opcodes.opRETURN);
-        String.unsafe_blit "\000\000\000\001\000\000\000" 0
-        code (compunit.cu_codesize + 1) 7;
-        let initial_symtable = Symtable.current_state() in
-        Symtable.patch_object code compunit.cu_reloc;
-        Symtable.update_global_table();
-
-        begin try
-            may_trace := true;
-            ignore((Meta.reify_bytecode code code_size) ());
-            may_trace := false;
-        with exn ->
-            may_trace := false;
-            Symtable.restore_state initial_symtable;
-            print_exception_outcome ppf exn;
-            raise Load_failed
-        end;
-
-        "ok"
-    end else
-        "bad cmo magic number"
+(* this is just to avoid a c library. *)
+let print_stdout s = 
+    Js.Unsafe.fun_call (Js.Unsafe.variable "my_js_print_stdout") [| Js.Unsafe.inject s |]
+let print_stderr s = 
+    Js.Unsafe.fun_call (Js.Unsafe.variable "my_js_print_stderr") [| Js.Unsafe.inject s |]
 
 let main () = 
     (* iocaml variable is now in kernel.js *)
     let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" in
+    (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
     Firebug.console##log (Js.string "iocamljs");
-    Sys.interactive := false;
+    Sys.interactive := true;
+    Sys_js.set_channel_flusher stdout print_stdout;
+    Sys_js.set_channel_flusher stderr print_stderr;
     Toploop.set_paths();
     !Toploop.toplevel_startup_hook();
     Toploop.initialize_toplevel_env ();

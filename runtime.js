@@ -1,4 +1,4 @@
-//concat mlString.js ieee_754.js int64.js md5.js marshall.js lexing.js parsing.js json.js bigarray.js unix.js stdlib.js io.js jslib.js jslib_js_of_ocaml.js
+//concat mlString.js ieee_754.js int64.js md5.js marshall.js lexing.js parsing.js json.js bigarray.js unix.js stdlib.js io.js jslib.js jslib_js_of_ocaml.js internalMod.js
 //# 1 "mlString.js"
 // Js_of_ocaml runtime support
 // http://www.ocsigen.org/js_of_ocaml/
@@ -32,7 +32,7 @@
 // implementation of string differs significantly from Javascript.
 // This way, using the wrong object is detected early.
 
-//Provided caml_str_repeat
+//Provides: caml_str_repeat
 function caml_str_repeat(n, s) {
   if (!n) { return ""; }
   if (n & 1) { return caml_str_repeat(n - 1, s) + s; }
@@ -41,7 +41,7 @@ function caml_str_repeat(n, s) {
 }
 
 //Provides: MlString
-//Requires: caml_raise_with_arg, js_print_stderr, caml_global_data
+//Requires: caml_raise_with_arg, js_print_stderr, caml_global_data, caml_str_repeat
 function MlString(param) {
   if (param != null) {
     this.bytes = this.fullBytes = param;
@@ -751,7 +751,7 @@ function caml_int64_of_float (x) {
 //Requires: caml_parse_format, caml_finish_formatting
 //Requires: caml_int64_is_negative, caml_int64_neg
 //Requires: caml_int64_of_int32, caml_int64_udivmod, caml_int64_to_int32
-//Requires: caml_int64_is_zero
+//Requires: caml_int64_is_zero, caml_str_repeat
 function caml_int64_format (fmt, x) {
   var f = caml_parse_format(fmt);
   if (f.signedconv && caml_int64_is_negative(x)) {
@@ -836,6 +836,16 @@ function caml_int64_to_bytes(x) {
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+
+//Provides: caml_md5_chan
+//Requires: caml_md5_string, MlStringFromArray
+function caml_md5_chan(chan,len){
+  if(len<0){
+    len=chan.data.array.length - chan.data.offset;
+  }
+  return caml_md5_string(new MlStringFromArray(chan.data.array),chan.data.offset,len);
+}
 
 //Provides: caml_md5_string
 //Requires: MlString, MlStringFromArray
@@ -1221,6 +1231,18 @@ var caml_input_value_from_string = function (){
               var v = reader.read32s ();
               if (intern_obj_table) intern_obj_table[obj_counter++] = v;
               return v;
+            case "_n":
+              // Nativeint
+              switch (reader.read8u ()) {
+              case 1:
+                var v = reader.read32s ();
+                if (intern_obj_table) intern_obj_table[obj_counter++] = v;
+                return v;
+              case 2:
+                caml_failwith("input_value: native integer value too large");
+              default:
+                caml_failwith("input_value: ill-formed native integer");
+              }
             default:
               caml_failwith("input_value: unknown custom block identifier");
             }
@@ -2361,10 +2383,13 @@ function caml_json() { return JSON; }//# 1 "bigarray.js"
 //Provides: caml_ba_init const
 function caml_ba_init () {}
 
-//Provides: caml_ba_create const
-//Requires: caml_invalid_argument
+
+//Provides: caml_ba_views
 var caml_ba_views;
 
+//Provides: caml_ba_create const
+//Requires: caml_invalid_argument
+//Requires: caml_ba_views
 function caml_ba_create (kind, layout, dim) {
   if (dim.length != 2)
     caml_invalid_argument("Bigarray.create: bad number of dimensions");
@@ -2389,7 +2414,7 @@ function caml_ba_create (kind, layout, dim) {
 function caml_ba_dim_1 (b) { return b.length; }
 
 //Provides: caml_ba_kind const
-
+//Requires: caml_ba_views
 // Not exactly the bigarray kind, but accurate enough to create
 // another array of the same kind
 function caml_ba_kind (b) {
@@ -2929,7 +2954,7 @@ function caml_finish_formatting(f, rawbuffer) {
 }
 
 //Provides: caml_format_int const
-//Requires: caml_parse_format, caml_finish_formatting, MlWrappedString
+//Requires: caml_parse_format, caml_finish_formatting, MlWrappedString,caml_str_repeat
 function caml_format_int(fmt, i) {
   if (fmt.toString() == "%d") return new MlWrappedString(""+i);
   var f = caml_parse_format(fmt);
@@ -3239,14 +3264,26 @@ function caml_array_blit(a1, i1, a2, i2, len) {
 
 ///////////// CamlinternalOO
 //Provides: caml_get_public_method const
-function caml_get_public_method (obj, tag) {
+var caml_method_cache = [];
+function caml_get_public_method (obj, tag, cacheid) {
   var meths = obj[1];
+  var ofs = caml_method_cache[cacheid];
+  if (ofs === null) {
+    // Make sure the array is not sparse
+    for (var i = caml_method_cache.length; i < cacheid; i++)
+      caml_method_cache[i] = 0;
+  } else if (meths[ofs] === tag) {
+//      console.log("cache hit");
+    return meths[ofs - 1];
+  }
+//  console.log("cache miss");
   var li = 3, hi = meths[1] * 2 + 1, mi;
   while (li < hi) {
     mi = ((li+hi) >> 1) | 1;
     if (tag < meths[mi+1]) hi = mi-2;
     else li = mi;
   }
+  caml_method_cache[cacheid] = li + 1;
   /* return 0 if tag is not there */
   return (tag == meths[li+1] ? meths[li] : 0);
 }
@@ -3317,10 +3354,32 @@ function caml_register_file(name,content) {
   caml_global_data.files[(name instanceof MlString)?name.toString():name] = arr;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// last remaining hack over base distribution
+
+//Provides: iocaml_request_file
+//Requires: caml_register_file
+function iocaml_request_file(path) {
+    var xml = new XMLHttpRequest();
+    xml.open('GET', 'file/' + path, false);
+    xml.send(null);
+    if (xml.status === 200) {
+        var arr = new Array();
+        for (var i=0; i<xml.responseText.length; i++) {
+            arr[i] = xml.responseText.charCodeAt(i) & 0xff;
+        }
+        caml_register_file(path, arr);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 //Provides: caml_sys_file_exists
-//Requires: caml_global_data
+//Requires: caml_global_data, iocaml_request_file
 function caml_sys_file_exists (name) {
-  return (caml_global_data.files && caml_global_data.files[name.toString()])?1:0;
+  return (caml_global_data.files && caml_global_data.files[name.toString()]) ? 1 : 
+      iocaml_request_file(name);
 }
 
 //Provides: caml_sys_remove
@@ -3431,8 +3490,8 @@ function caml_std_output(chan,s){
 function caml_ml_open_descriptor_out (fd) {
   var output;
   switch(fd){
-    case 1: output=my_js_print_stdout;break;
-    case 2: output=my_js_print_stderr;break;
+    case 1: output=js_print_stdout;break;
+    case 2: output=js_print_stderr;break;
     default: output=caml_std_output;
   }
   var data = caml_global_data.fds[fd];
@@ -3460,6 +3519,14 @@ function caml_ml_open_descriptor_in (fd)  {
     fd:fd,
     opened:true
   };
+}
+
+
+//Provides: caml_ml_set_binary_mode
+function caml_ml_set_binary_mode(chan,mode){
+  chan.data.flags.text = !mode
+  chan.data.flags.binary = mode
+  return 0;
 }
 
 //Input from in_channel
@@ -3493,7 +3560,7 @@ function caml_ml_set_channel_output(chan,f) {
 //Provides: caml_ml_input
 //Requires: caml_blit_string, MlStringFromArray
 function caml_ml_input (chan, s, i, l) {
-  var l2 = chan.data.array.length - chan.data.array.offset;
+  var l2 = chan.data.array.length - chan.data.offset;
   if (l2 < l) l = l2;
   caml_blit_string(new MlStringFromArray(chan.data.array), chan.data.offset, s, i, l);
   chan.data.offset += l;
@@ -3520,6 +3587,35 @@ function caml_ml_input_char (chan) {
   chan.data.offset++;
   return c;
 }
+
+//Provides: caml_ml_input_int
+//Requires: caml_raise_end_of_file
+function caml_ml_input_int (chan) {
+  if ((chan.data.offset + 3) >= chan.data.array.length)
+    caml_raise_end_of_file();
+  var a = chan.data.array, o = chan.data.offset;
+  var r = (a[o] << 24) | (a[o+1] << 16) | (a[o+2] << 8) | (a[o+3]);
+  chan.data.offset+=4;
+  return r;
+}
+
+//Provides: caml_ml_seek_in
+function caml_ml_seek_in(chan,pos){
+  chan.data.offset = pos;
+}
+
+//Provides: caml_ml_seek_in_64
+//Requires: caml_int64_to_float
+function caml_ml_seek_in_64(chan,pos){
+  chan.data.offset = caml_int64_to_float(pos);
+}
+
+//Provides: caml_ml_pos_in
+function caml_ml_pos_in(chan) {return chan.data.offset}
+
+//Provides: caml_ml_pos_in_64
+//Requires: caml_int64_of_float
+function caml_ml_pos_in_64(chan) {return caml_int64_of_float(chan.data.offset)}
 
 //Provides: caml_ml_input_scan_line
 //Requires: caml_array_bound_error
@@ -3579,6 +3675,43 @@ function caml_ml_output (oc,buffer,offset,len) {
 function caml_ml_output_char (oc,c) {
     var s = caml_new_string(String.fromCharCode(c));
     caml_ml_output(oc,s,0,1);
+}
+
+//Provides: caml_output_value
+//Requires: caml_output_value_to_string, caml_ml_output
+function caml_output_value (chan,v,flags) {
+  var s = caml_output_value_to_string(v);
+  caml_ml_output(chan,s,0,s.getLen());
+}
+
+
+//Provides: caml_ml_seek_out
+function caml_ml_seek_out(chan,pos){
+  chan.data.offset = pos;
+}
+
+//Provides: caml_ml_seek_out_64
+//Requires: caml_int64_to_float
+function caml_ml_seek_out_64(chan,pos){
+  chan.data.offset = caml_int64_to_float(pos);
+}
+
+//Provides: caml_ml_pos_out
+function caml_ml_pos_out(chan) {return chan.data.offset}
+
+//Provides: caml_ml_pos_out_64
+//Requires: caml_int64_of_float
+function caml_ml_pos_out_64(chan) {
+  return caml_int64_of_float (chan.data.offset);
+}
+
+//Provides: caml_ml_output_int
+//Requires: caml_ml_output
+//Requires: MlStringFromArray
+function caml_ml_output_int (oc,i) {
+  var arr = [(i>>24) & 0xFF,(i>>16) & 0xFF,(i>>8) & 0xFF,i & 0xFF ];
+  var s = new MlStringFromArray(arr);
+  caml_ml_output(oc,s,0,4);
 }
 //# 1 "jslib.js"
 // Js_of_ocaml library
@@ -3654,11 +3787,27 @@ function caml_js_get_console () {
   return c;
 }
 
+//Provides:caml_trampoline
+function caml_trampoline(res) {
+  var c = 1;
+  while(res && res.joo_tramp){
+    res = res.joo_tramp.apply(null, res.joo_args);
+    c++;
+  }
+  //if(c>10) joo_global_object.console.log("trampoline ", c, "times")
+  return res;
+}
+
+//Provides:caml_trampoline_return
+function caml_trampoline_return(f,args) {
+  return {joo_tramp:f,joo_args:args};
+}
+
 //Provides: js_print_stdout
 function js_print_stdout(s) {
   // Do not output the last \n if present
   // as console logging display a newline at the end
-  if(s.charCodeAt(s.length - 1))
+  if(s.charCodeAt(s.length - 1) == 10)
     s = s.substr(0,s.length - 1 );
   var v = joo_global_object.console;
   v  && v.log && v.log(s);
@@ -3667,7 +3816,7 @@ function js_print_stdout(s) {
 function js_print_stderr(s) {
   // Do not output the last \n if present
   // as console logging display a newline at the end
-  if(s.charCodeAt(s.length - 1))
+  if(s.charCodeAt(s.length - 1) == 10)
     s = s.substr(0,s.length - 1 );
   var v = joo_global_object.console;
   v && v.error && v.error(s);
@@ -3716,7 +3865,7 @@ function caml_js_to_array(a) { return [0].concat(a); }
 function caml_js_var(x) { return eval(x.toString()); }
 //Provides: caml_js_const const
 function caml_js_const(x) {
-  switch (caml_string_to_js(x)) {
+  switch (x.toString()) {
   case "null": return null;
   case "true": return true;
   case "false": return false;
@@ -3741,7 +3890,7 @@ function caml_js_new(c, a) {
   case 7: return new c (a[1],a[2],a[3],a[4],a[5],a[6]);
   case 8: return new c (a[1],a[2],a[3],a[4],a[5],a[6], a[7]);
   }
-  function F() { return c.apply(this, args.slice(1)); }
+  function F() { return c.apply(this, a.slice(1)); }
   F.prototype = c.prototype;
   return new F;
 }
@@ -3785,4 +3934,46 @@ function caml_js_object (a) {
     o[p[1]] = p[2];
   }
   return o;
+}
+//# 1 "internalMod.js"
+
+
+
+
+//Provides: caml_CamlinternalMod_init_mod
+function caml_CamlinternalMod_init_mod(loc,shape) {
+    function loop (shape,struct,idx){
+        switch(shape){
+        case 0://function
+            struct[idx]={};//fun:null
+            return;
+        case 1://lazy
+        case 2://class
+            struct[idx]=[];
+            break;
+        default://module
+            struct[0] = [0];
+            for(var i=1;i<shape[1].length;i++)
+                loop(shape[1][i],struct[0],i)
+        }
+    }
+    var res = [];
+    loop(shape,res,0);
+    return res[0]
+}
+//Provides: caml_CamlinternalMod_update_mod
+//Requires: caml_update_dummy
+function caml_CamlinternalMod_update_mod(shape,real,x) {
+  switch(shape){
+  case 0://function
+    real.fun = x;
+    break;
+  case 1://lazy
+  case 2://class
+    caml_update_dummy(real,x);
+    break;
+  default:
+    for(var i=1;i<shape[1].length;i++)
+      caml_CamlinternalMod_update_mod(shape[1][i],real[i],x[i])
+  }
 }
