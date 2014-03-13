@@ -14,9 +14,10 @@
 #    Link together the top level.  At this stage we may add
 #    in user packages and syntax extensions.
 #
-# 3. expunge some modules
+# 3. expunge modules
 #
-#    Remove internal compiler modules
+#    Specify the (user) module to include and get rid of everything
+#    else
 #
 # 4. convert to javascript
 #
@@ -28,14 +29,10 @@
 # 2. SYNTAX - a set of ocamlfind syntax extensions
 # 3. MODULES - module names to keep
 #
-# Note that the syntax extensions are not run here, they are linked
-# into the toplevel.  
-#
+# Note; the syntax extensions in step 2 are linked in not run
 # Note; to specify more than one package separate with spaces
-#
 # Note; we rely on ocamlfind to give us corrent include directories
-#       and archive names - I am not sure how robust that really is,
-#       espectially for syntax extensions
+#       and archive names - I am not sure how robust that really is
 #
 #######################################################################
 
@@ -44,8 +41,13 @@
 #######################################################################
 # configuration
 
-# js_of_ocaml 
-JS_OF_OCAML_OPTS=-pretty -noinline
+# js_of_ocaml
+ifeq ($(OPT),1)
+JS_OF_OCAML_OPTS=-opt 2 noinline -linkall
+else
+JS_OF_OCAML_OPTS=-noinline -linkall
+endif
+
 JS_FILES= \
 	runtime.js \
 	$(shell ocamlfind query js_of_ocaml)/weak.js \
@@ -80,9 +82,10 @@ endif
 
 KEEP_COMPILER=\
 Arg Array ArrayLabels Buffer Callback CamlinternalLazy CamlinternalMod CamlinternalOO \
-Char Complex Digest Dynlink Filename Format Genlex Hashtbl Int32 Int64 Lazy Lexing \
+Char Complex Digest Dynlink Filename Format Genlex Gc Hashtbl Int32 Int64 Lazy Lexing \
 List ListLabels Map Marshal MoreLabels Nativeint Obj Oo Parsing Pervasives Printexc \
-Printf Queue Random Scanf Set Sort Stack StdLabels Stream String StringLabels Sys Weak
+Printf Queue Random Scanf Set Sort Stack StdLabels Stream String StringLabels Sys Weak \
+Iocaml
 
 # camlp4
 ifeq ($(CAMLP4),1)
@@ -98,13 +101,11 @@ LWT_INCLUDE=`ocamlfind query -i-format lwt`
 endif
 
 # js_of_ocaml
-# if this is included, we can also include Iocaml
 ifeq ($(JSOO),1)
 KEEP_JSOO=\
 CSS Dom Dom_events Dom_html Event_arrows File Firebug Form Js \
 Json Lwt_js Lwt_js_events Regexp Sys_js Typed_array Url \
-WebGL WebSockets XmlHttpRequest \
-Iocaml
+WebGL WebSockets XmlHttpRequest 
 JSOO_INCLUDE=`ocamlfind query -i-format js_of_ocaml`
 endif
 
@@ -114,12 +115,19 @@ KEEP_MODULES=$(KEEP_COMPILER) $(KEEP_CAMLP4) $(KEEP_LWT) $(KEEP_JSOO) $(KEEP_TOP
 
 #######################################################################
 # main build targets
-all: static/services/kernels/js/kernel.js
+
+EXT=
+
+all: static/services/kernels/js/kernel$(EXT).js
 
 full:
 	make all \
+		OPT=1 EXT=".full" \
 		CAMLP4=1 LWT=1 JSOO=1 \
 		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax" 
+
+min:
+	make all OPT=1 EXT=".min"
 
 #######################################################################
 # build
@@ -159,19 +167,14 @@ iocaml.js: iocaml.byte $(JS_FILES)
 		iocaml.byte
 
 # main target
-static/services/kernels/js/kernel.js: kernel.js iocaml.js
-	cat kernel.js iocaml.js > static/services/kernels/js/kernel.js
-
+static/services/kernels/js/kernel$(EXT).js: kernel.js iocaml.js
+	cat kernel.js iocaml.js > static/services/kernels/js/kernel$(EXT).js
 
 #######################################################################
-# install
-
-#uninstall:
-#	ocamlfind remove iocamljs
+# install (not needed anymore with iocamlserver)
 
 install:
 	cp -r static `ipython locate profile iocamljs`
-#	ocamlfind install iocamljs META iocaml.cmi
 
 clean::
 	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 

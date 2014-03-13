@@ -283,7 +283,7 @@ var IPython = (function (IPython) {
             r = res.message;
             success = res.compilerStatus;
         } catch(err) {
-            r = err; /* presumably a javscript exception */
+            r = err; // presumably a javscript exception 
             success = false;
         }
         console.log = save_console_log;

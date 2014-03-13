@@ -8,8 +8,8 @@ extensions are enabled.
 Only a small API for interacting with the notebook is provided by `iocamljs` at 
 the moment; `js_of_ocaml` provides far greater possibilities.
 
-The demo notebook `js_of_ocaml-webgl-demo.ipynb` provides a good example of whats 
-can be done.  Its an almost directly copy of the 
+The demo notebook `js_of_ocaml-webgl-demo.ipynb` provides a good example of what 
+can be done.  Its an almost direct copy of the 
 [js_of_ocaml WebGL demo](http://ocsigen.org/js_of_ocaml/files/webgl/index.html) except
 the 3d model, shader code, ocaml code and html code are all embedded in the notebook
 and can be compiled and run live in the browser.
@@ -57,12 +57,16 @@ which then copies the `static` directory tree to the `iocamljs` profile.
 To add the syntax extensions you should build
 
 ```
-make js_toplevel
+make top
 ```
 
 ## Adding libraries
 
-It is possible to add other (pure) OCaml libraries and syntax extensions
-to the build process and make them available to the REPL.  It's a little 
-bit involved at the moment but hopefully it will improve.
+Preliminary support for topfind has been tested.  This requires the use
+of [IOCamlServer](https://github.com/andrewray/iocamlserver) which will
+be release soon (it works but requires some updated packages to build).
+This allows libraries to be loaded interactively within the notebook
+interface.
 
+Alternatively libraries may be built into IOCamlJS itself.  See the
+makefile for more information about how this works.

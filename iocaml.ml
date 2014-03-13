@@ -21,13 +21,22 @@
 open Js
 open Compiler
 
-let jsoo_debug = List.iter Option.Debug.set
+let touch_me_up() = ()
 
-let jsoo_debug_all () = 
-    (*Option.Debug.set "shortvar";*)
-    jsoo_debug ["gen"; "parser"; "deadcode"; "main"; "linker"; "flow"; "times" ]
+(* XXX only if unix built in *)
+(*let () = Util.Timer.init Unix.gettimeofday*)
 
-module PatchCompile = struct
+module Compile = struct
+
+    let jsoo_debug = List.iter Option.Debug.set
+
+    let jsoo_debug_all () = 
+        (*Option.Debug.set "shortvar";*)
+        jsoo_debug ["gen"; "parser"; "deadcode"; "main"; "linker"; "flow"; "times" ]
+
+    let generate_stubs = ref true
+
+    let set_timer t = Util.Timer.init t
 
     let split_primitives p =
         let len = String.length p in
@@ -40,30 +49,55 @@ module PatchCompile = struct
         Array.of_list(split 0 0)
 
     class type global_data = object
-        method toc : (string * string) list Js.readonly_prop
+        method toc : (string * string) list Js.readonly_prop (* not used anymore *)
         method compile : (string -> string) Js.writeonly_prop
+        method auto_register_file_ : (string -> int) Js.writeonly_prop
     end
 
     external global_data : unit -> global_data Js.t = "caml_get_global_data"
     let g = global_data ()
 
-    let _ = (* patch the compile method *)
-    
-        let toc = g##toc in
-        let prims = split_primitives (List.assoc "PRIM" toc) in
+    let initial_primitive_count =
+        Array.length (split_primitives (Symtable.data_primitive_names ())) 
 
-        (* so what does this actually do? *)
+    let get_stubs () = 
+        let prims = split_primitives (Symtable.data_primitive_names ()) in
+        let count = Array.length prims in
+        Array.init (count - initial_primitive_count) 
+            (fun i -> prims.(i+initial_primitive_count))
+
+    (* install a compile method into caml_global_data *)
+    let _ = 
+
         let compile s =
+            let prims = split_primitives (Symtable.data_primitive_names ()) in
+
+            let unbound_primitive p =
+                 try ignore (Js.Unsafe.eval_string p); false with _ -> true 
+            in
+            let stubs = ref [] in
+            if !generate_stubs then begin
+                Array.iteri
+                    (fun i p ->
+                        if i >= initial_primitive_count && unbound_primitive p then
+                            stubs :=
+                                Format.sprintf
+                                    "function %s(){caml_failwith(\"%s not implemented\")}" p p
+                                :: !stubs)
+                prims
+             end;
+
             let output_program = Driver.from_string prims s in
             let b = Buffer.create 100 in
             output_program (Pretty_print.to_buffer b);
             Format.(pp_print_flush std_formatter ());
             Format.(pp_print_flush err_formatter ());
             flush stdout; flush stderr;
-            Buffer.contents b
+            let res = Buffer.contents b in
+            let res = String.concat "" !stubs ^ res in
+            res
         in
-        g##compile <- compile; (*XXX HACK!*)
-
+        g##compile <- compile (*XXX HACK!*)
 end
 
 module Base64 = struct
@@ -154,12 +188,11 @@ class type iocaml = object
     method name : js_string t prop
     method execute : (int -> js_string t -> iocaml_result t) writeonly_prop
 end
-(*
+
 class type kernel = object
-    method send_stdout_message : (js_string t -> unit) readonly_prop
-    method send_stderr_message : (js_string t -> unit) readonly_prop
-    (*method send_mime_message : (js_string t -> js_string t -> unit) prop
-    method send_clear : (bool -> bool -> bool -> bool -> unit) prop*)
+    method send_stdout_message_ : js_string t -> js_string t -> unit meth 
+    method send_mime_ : js_string t -> js_string t -> unit meth
+    method send_clear_ : bool -> bool -> bool -> bool -> unit meth 
 end
 class type notebook = object
     method kernel : kernel t readonly_prop
@@ -167,7 +200,6 @@ end
 class type _iPython = object
     method notebook : notebook t readonly_prop
 end
-*)
 
 module Exec = struct
 
@@ -235,26 +267,6 @@ module Exec = struct
 
 end
 
-let display ?(base64=false) mime_type data = 
-    let data = 
-        if not base64 then data
-        else Base64.encode data
-    in
-    let data = Js.string data in
-    Js.Unsafe.fun_call 
-        (Js.Unsafe.variable "caml_ml_display") 
-            [| Js.Unsafe.inject mime_type; Js.Unsafe.inject data  |]
-
-let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () = 
-   Js.Unsafe.fun_call 
-        (Js.Unsafe.variable "caml_ml_clear_display") 
-            [|
-                Js.Unsafe.inject wait;
-                Js.Unsafe.inject stdout;
-                Js.Unsafe.inject stderr;
-                Js.Unsafe.inject other;
-            |]
-
 let load_from_server path = 
     let xml = XmlHttpRequest.create () in
     let () = xml##_open(Js.string "GET", Js.string ("file/" ^ path), Js._false) in
@@ -270,27 +282,56 @@ let load_from_server path =
     else
         None
 
-(* this is just to avoid a c library. *)
-let print_stdout s = 
-    Js.Unsafe.fun_call (Js.Unsafe.variable "my_js_print_stdout") [| Js.Unsafe.inject s |]
-let print_stderr s = 
-    Js.Unsafe.fun_call (Js.Unsafe.variable "my_js_print_stderr") [| Js.Unsafe.inject s |]
+let auto_register_file name = 
+    match load_from_server name with
+    | None -> 0
+    | Some(content) ->
+        let () = Sys_js.register_file ~name ~content in
+        1
+
+let ipython = Js.Unsafe.variable "IPython"
+
+let send_stdout_message s w = 
+    if Js.Opt.test ipython##notebook && Js.Opt.test ipython##notebook##kernel then
+        ipython##notebook##kernel##send_stdout_message_ (Js.string s, Js.string w)
+    else
+        Firebug.console##log(Js.string s)
+
+let print_stdout s = send_stdout_message s "stdout"
+let print_stderr s = send_stdout_message s "stderr"
+
+let display ?(base64=false) mime_type data = 
+    let data = if not base64 then data else Base64.encode data in
+    ipython##notebook##kernel##send_mime_(Js.string mime_type, Js.string data)
+
+let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () = 
+    ipython##notebook##kernel##send_clear_(wait,stdout,stderr,other)
 
 let main () = 
     (* iocaml variable is now in kernel.js *)
     let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" in
+    (* automatically query server for files *)
+    Compile.g##auto_register_file_ <- auto_register_file;
     (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
-    Firebug.console##log (Js.string "iocamljs");
+    Firebug.console##log (Js.string "iocamljs-dev");
+    (* re-direct output to the notebook *)
     Sys.interactive := true;
     Sys_js.set_channel_flusher stdout print_stdout;
     Sys_js.set_channel_flusher stderr print_stderr;
+    (* initialize the toploop *)
     Toploop.set_paths();
     !Toploop.toplevel_startup_hook();
     Toploop.initialize_toplevel_env ();
     Toploop.input_name := "";
-    (* this is what kernel.js will used to compile code from the notebook *)
-    iocaml##name <- Js.string "iocamljs"; (* XXX remove me, we've got the object now *)
+    (* install the ocaml/js_of_ocaml compiler *)
+    iocaml##name <- Js.string "iocamljs"; 
     iocaml##execute <- Exec.execute;
+    (* Bodge. touch iocaml to bring in js.cmi.  
+     * The alternatives appear to be 
+     * 1] Include Js - that actually works and might be better
+     * 2] Expunge Iocaml and provide the API via a #use "iocaml" script
+     *)
+    ignore (Exec.execute (-1) (Js.string "Iocaml.touch_me_up()"));
     ()
 
 

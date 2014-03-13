@@ -3354,32 +3354,12 @@ function caml_register_file(name,content) {
   caml_global_data.files[(name instanceof MlString)?name.toString():name] = arr;
 }
 
-//////////////////////////////////////////////////////////////////////////
-// last remaining hack over base distribution
-
-//Provides: iocaml_request_file
-//Requires: caml_register_file
-function iocaml_request_file(path) {
-    var xml = new XMLHttpRequest();
-    xml.open('GET', 'file/' + path, false);
-    xml.send(null);
-    if (xml.status === 200) {
-        var arr = new Array();
-        for (var i=0; i<xml.responseText.length; i++) {
-            arr[i] = xml.responseText.charCodeAt(i) & 0xff;
-        }
-        caml_register_file(path, arr);
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 //Provides: caml_sys_file_exists
-//Requires: caml_global_data, iocaml_request_file
+//Requires: caml_global_data
 function caml_sys_file_exists (name) {
   return (caml_global_data.files && caml_global_data.files[name.toString()]) ? 1 : 
-      iocaml_request_file(name);
+      (caml_global_data.auto_register_file === undefined ? 0 : 
+        caml_global_data.auto_register_file(name));
 }
 
 //Provides: caml_sys_remove

@@ -57,7 +57,8 @@ function caml_dynlink_close_lib () { return 0; }
 
 //Provides: caml_dynlink_lookup_symbol
 function caml_dynlink_lookup_symbol (h, s) {
-  try { eval(s.toString()); return 1; } catch (e) { return 0; };
+  /*try { eval(s.toString()); return 1; } catch (e) { return 0; };*/
+    return 1;
 }
 
 //Provides: caml_dynlink_add_primitive
@@ -68,35 +69,4 @@ function caml_dynlink_add_primitive () {
 
 //Provides: caml_dynlink_get_current_libs
 function caml_dynlink_get_current_libs () { return [0, 0]; }
-
-///////////////////////////////////////////////////////////////////////////
-// this can be moved into a seperate file now
-
-// send mime_type display message
-function caml_ml_display(mime_type, data) {
-    IPython.notebook.kernel.send_mime(mime_type, data);
-}
-
-// clear display
-function caml_ml_clear_display(wait,stdout,stderr,other) {
-    IPython.notebook.kernel.send_clear(wait,stdout,stderr,other);
-}
-
-// print to stdout
-function my_js_print_stdout(s) { 
-    if (IPython.notebook === undefined) {
-        console.log(s);
-    } else {
-        IPython.notebook.kernel.send_stdout_message(s.toString(), "stdout"); 
-    }
-}
-
-// print to stderr
-function my_js_print_stderr(s) { 
-    if (IPython.notebook === undefined) {
-        console.log(s);
-    } else {
-        IPython.notebook.kernel.send_stdout_message(s.toString(), "stderr");
-    } 
-}
 
