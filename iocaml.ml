@@ -23,9 +23,6 @@ open Compiler
 
 let touch_me_up() = ()
 
-(* XXX only if unix built in *)
-(*let () = Util.Timer.init Unix.gettimeofday*)
-
 module Compile = struct
 
     let jsoo_debug = List.iter Option.Debug.set
