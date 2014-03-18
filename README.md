@@ -1,72 +1,52 @@
 # IOCamlJS 
 
-IOCamlJS runs a (compiled-to-javascript) OCaml REPL in the IPython notebook.
-`stdout` and `stderr` are redirected to the notebook interface so 
-`printf` works as expected.  The `js_of_ocaml` and `lwt` syntax 
-extensions are enabled.
+IOCaml is an OCaml kernel for the 
+[IPython notebook](http://ipython.org/notebook.html). 
+This provides a REPL within a web browser with a nice user interface 
+including markdown based comments/documentation, mathjax formula and 
+the possibility of generating all manner of HTML based output media 
+from your code.  
 
-Only a small API for interacting with the notebook is provided by `iocamljs` at 
-the moment; `js_of_ocaml` provides far greater possibilities.
+See also
+
+* [IOCaml-kernel](https://github.com/andrewray/iocaml)
+* [IOCamlJS-kernel](https://github.com/andrewray/iocamljs)
+* [IOCaml](https://github.com/andrewray/iocamlserver)
+
+This repository hosts the iocamljs-kernel package.
+
+With this kernel the OCaml REPL is compiled to JavaScript and run in the
+browser.
 
 The demo notebook `js_of_ocaml-webgl-demo.ipynb` provides a good example of what 
 can be done.  Its an almost direct copy of the 
-[js_of_ocaml WebGL demo](http://ocsigen.org/js_of_ocaml/files/webgl/index.html) except
+[js\_of\_ocaml WebGL demo](http://ocsigen.org/js_of_ocaml/files/webgl/index.html) except
 the 3d model, shader code, ocaml code and html code are all embedded in the notebook
 and can be compiled and run live in the browser.
 
-## To run the code
+When run using the [IOCaml server](https://github.com/andrewray/iocamlserver) the 
+toplevel can support file I/O including dynamic loading of libraries using
+topfind ```#require``` directives.
 
-The javascript required to run the code is included in the repository.  Nothing needs
-to be compiled - just do the following (assuming you have IPython 1.1 installed, otherwise
-see [iocaml](https://github.com/andrewray/iocaml) for help).
-
-```
-ipython profile create iocamljs
-cp -r static `ipython locate profile iocamljs`
-ipython notebook --profile=iocamljs
-```
-
-## Building
-
-__Watch out for the browser caching old versions of JavaScript code
-(including from other ipython profiles) - in Chrome reload the page with
-ctrl-shift-r.__
-
-To build the code you need to use the latest trunk version of `js_of_ocaml`.  You can
-either manually install it, or use OPAM to pin the latest version.
+## Installation
 
 ```
-opam pin js_of_ocaml git://github.com/ocsigen/js_of_ocaml
-opam install js_of_ocaml
+$ opam install iocaml
 ```
 
-Once that is finished, you can rebuild the JavaScript with:
+or to just get the kernel
 
 ```
-make
+$ opam install iocamljs-kernel
 ```
 
-which creates `static/services/kernels/js/kernel.js` and
+Precompiled versions which should be usable on windows will be
+provided on the releases/tags pages.
 
-```
-make install
-```
+## Js\_of\_ocaml version
 
-which then copies the `static` directory tree to the `iocamljs` profile.
+IOCamlJS currently requries a dev version of js\_of\_ocaml.  At the
+moment it necessary to provide the javascript for the kernels rather
+than compile them.  This should change with the release of js\_of\_ocaml
+1.5.
 
-To add the syntax extensions you should build
-
-```
-make top
-```
-
-## Adding libraries
-
-Preliminary support for topfind has been tested.  This requires the use
-of [IOCamlServer](https://github.com/andrewray/iocamlserver) which will
-be release soon (it works but requires some updated packages to build).
-This allows libraries to be loaded interactively within the notebook
-interface.
-
-Alternatively libraries may be built into IOCamlJS itself.  See the
-makefile for more information about how this works.

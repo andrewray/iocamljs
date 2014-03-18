@@ -51,6 +51,8 @@ module Compile = struct
     external global_data : unit -> global_data Js.t = "caml_get_global_data"
     let g = global_data ()
 
+    let () = Topdirs.dir_directory "/cmis"
+
     let initial_primitive_count =
         Array.length (split_primitives (Symtable.data_primitive_names ())) 
 
