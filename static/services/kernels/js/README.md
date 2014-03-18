@@ -1,6 +1,6 @@
 The iocamljs kernels, which are the main output of the project live here.
 
-At the moment we generation 2 kernels;
+At the moment we generate 2 kernels;
 
 `kernel.min.js` - minimum top level with (almost) nothing built in
 `kernel.full.js` - top level with lwt, js\_of\_ocaml and camlp4 syntax extensions

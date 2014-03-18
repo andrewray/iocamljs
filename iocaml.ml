@@ -25,11 +25,9 @@ let touch_me_up() = ()
 
 module Compile = struct
 
-    let jsoo_debug = List.iter Option.Debug.set
-
-    let jsoo_debug_all () = 
-        (*Option.Debug.set "shortvar";*)
-        jsoo_debug ["gen"; "parser"; "deadcode"; "main"; "linker"; "flow"; "times" ]
+    let jsoo_debug v s = 
+        if s then Option.Debug.enable v
+        else Option.Debug.disable v
 
     let generate_stubs = ref true
 
@@ -201,83 +199,15 @@ end
 let ipython = Js.Unsafe.variable "IPython"
 let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" 
 
-(*
-module Exec = struct
-
-    let buffer = Buffer.create 4096
-    let formatter = Format.formatter_of_buffer buffer
-
-    let get_error_loc = function 
-        | Syntaxerr.Error(x) -> Syntaxerr.location_of_error x
-        | Lexer.Error(_, loc) 
-        | Typecore.Error(loc, _, _) 
-        | Typetexp.Error(loc, _, _) 
-        | Typedecl.Error(loc, _) 
-        | Typeclass.Error(loc, _, _) 
-        | Typemod.Error(loc, _, _) 
-        | Translcore.Error(loc, _) 
-        | Translclass.Error(loc, _) 
-        | Translmod.Error(loc, _) -> loc
-        | _ -> raise Not_found
-
-    exception Exit
-    let report_error x = 
-        try begin
-            Errors.report_error formatter x; 
-            (try begin
-                if Location.highlight_locations formatter (get_error_loc x) Location.none then 
-                    Format.pp_print_flush formatter ()
-            end with _ -> ()); 
-            false
-        end with x -> (* shouldn't happen any more *) 
-            (Format.fprintf formatter "exn: %s@." (Printexc.to_string x); false)
-
-    let run_cell_lb execution_count lb =
-        let cell_name = "["^string_of_int execution_count^"]" in
-        Buffer.clear buffer;
-        Location.init lb cell_name;
-        Location.input_name := cell_name;
-        Location.input_lexbuf := Some(lb);
-        let success =
-            try begin
-                List.iter
-                    (fun ph ->
-                        if not (Toploop.execute_phrase true formatter ph) then raise Exit)
-                    (!Toploop.parse_use_file lb);
-                true
-            end with
-            | Exit -> false
-            | Sys.Break -> (Format.fprintf formatter "Interrupted.@."; false)
-            | x -> report_error x
-        in
-        success
-
-    let run_cell execution_count code = 
-        run_cell_lb execution_count 
-            (* little hack - make sure code ends with a '\n' otherwise the
-             * error reporting isn't quite right *)
-            Lexing.(from_string (code ^ "\n"))
-
-    let execute execution_count str = 
-        (*let status = run_cell_camlp4 execution_count (Js.to_string str) in*)
-        let status = run_cell execution_count (Js.to_string str) in
-        let v : iocaml_result t = Js.Unsafe.obj [||] in
-        v##message <- string (Buffer.contents buffer);
-        v##compilerStatus <- bool status;
-        v
-
-end
-*)
-
-let output_cell_max_height = "100px"
+let output_cell_max_height = ref "100px"
 
 let execute execution_count str = 
-    (*let status = run_cell_camlp4 execution_count (Js.to_string str) in*)
     let status = Exec.run_cell execution_count (Js.to_string str) in
     let () = List.iter 
         (fun m -> 
-            ipython##notebook##kernel##send_pyout_ 
-                (execution_count, Js.string (Exec.html_of_status m output_cell_max_height)))
+            if Js.Opt.test ipython##notebook && Js.Opt.test ipython##notebook##kernel then
+                ipython##notebook##kernel##send_pyout_ 
+                    (execution_count, Js.string (Exec.html_of_status m !output_cell_max_height)))
         status
     in
     let v : iocaml_result t = Js.Unsafe.obj [||] in
@@ -327,7 +257,7 @@ let main () =
     (* automatically query server for files *)
     Compile.g##auto_register_file_ <- auto_register_file;
     (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
-    Firebug.console##log (Js.string "iocamljs-dev");
+    Firebug.console##log (Js.string "iocamljs");
     (* re-direct output to the notebook *)
     Sys.interactive := true;
     Sys_js.set_channel_flusher stdout print_stdout;

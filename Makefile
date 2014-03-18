@@ -49,7 +49,7 @@ JS_OF_OCAML_OPTS=-noinline -linkall
 endif
 
 JS_FILES= \
-	runtime.js \
+	$(shell ocamlfind query js_of_ocaml)/runtime.js \
 	$(shell ocamlfind query js_of_ocaml)/weak.js \
 	toplevel_runtime.js 
 
@@ -59,7 +59,7 @@ COMPILER_LIBS_INC=$(shell ocamlfind query -i-format compiler-libs)
 
 # Camlp4 libs
 ifeq ($(CAMLP4),1)
-CAMLP4_LIBS=camlp4o.cma Camlp4Top.cmo
+CAMLP4_LIBS=camlp4o.cma #Camlp4Top.cmo
 CAMLP4_LIBS_INC=$(shell ocamlfind query -i-format camlp4)
 else
 CAMLP4_LIBS=
