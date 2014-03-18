@@ -40,8 +40,8 @@ or to just get the kernel
 $ opam install iocamljs-kernel
 ```
 
-Precompiled versions which should be usable on windows will be
-provided on the releases/tags pages.
+The latest precompiled version can be downloaded from 
+[here](https://github.com/andrewray/iocamljs/releases/download/v0.4/static.tar.gz).
 
 ## Js\_of\_ocaml version
 
