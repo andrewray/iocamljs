@@ -215,6 +215,19 @@ var IPython = (function (IPython) {
         }
     } 
 
+    Kernel.prototype.send_pyout = function(execution_count,message) {
+        if (this.execute_context !== null && this.execute_context !== undefined) {
+            var msg = this._get_msg("pyout", 
+                {
+                    execution_count: execution_count, 
+                    data: { "text/html" : message },
+                    metadata: {}
+                });
+            msg.parent_header = this.execute_context;
+            this._handle_iopub_reply({data : JSON.stringify(msg)});
+        }
+    } 
+
     Kernel.prototype.send_mime = function(mime_type,data) {
         if (this.execute_context !== null && this.execute_context !== undefined) {
             var d = {};
@@ -293,7 +306,8 @@ var IPython = (function (IPython) {
             execution_count: this.execution_count
         });
         reply.parent_header = request.header;
-        var result = null;
+        
+        /*var result = null;
         if (r !== null && r !== undefined) {
             if (success) {
                 result = this._get_msg("pyout", {
@@ -304,14 +318,6 @@ var IPython = (function (IPython) {
                     metadata : {}
                 });
             } else if (!success){
-                /*
-                result = this._get_msg("pyerr", {
-                    execution_count: this.execution_count,
-                    ename : r.name,
-                    evalue : r.message,
-                    traceback : [r.stack]
-                });
-                */
                 result = this._get_msg("pyout", {
                     execution_count: this.execution_count,
                     data : {
@@ -322,7 +328,7 @@ var IPython = (function (IPython) {
             }
             result.parent_header = request.header;
             this._handle_iopub_reply({data : JSON.stringify(result)});
-        }
+        }*/
         
         var idle = this._get_msg("status", {status: "idle"})
         idle.parent_header = request.header;

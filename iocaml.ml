@@ -46,7 +46,6 @@ module Compile = struct
         Array.of_list(split 0 0)
 
     class type global_data = object
-        method toc : (string * string) list Js.readonly_prop (* not used anymore *)
         method compile : (string -> string) Js.writeonly_prop
         method auto_register_file_ : (string -> int) Js.writeonly_prop
     end
@@ -188,6 +187,7 @@ end
 
 class type kernel = object
     method send_stdout_message_ : js_string t -> js_string t -> unit meth 
+    method send_pyout_ : int -> js_string t -> unit meth 
     method send_mime_ : js_string t -> js_string t -> unit meth
     method send_clear_ : bool -> bool -> bool -> bool -> unit meth 
 end
@@ -198,6 +198,10 @@ class type _iPython = object
     method notebook : notebook t readonly_prop
 end
 
+let ipython = Js.Unsafe.variable "IPython"
+let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" 
+
+(*
 module Exec = struct
 
     let buffer = Buffer.create 4096
@@ -263,6 +267,23 @@ module Exec = struct
         v
 
 end
+*)
+
+let output_cell_max_height = "100px"
+
+let execute execution_count str = 
+    (*let status = run_cell_camlp4 execution_count (Js.to_string str) in*)
+    let status = Exec.run_cell execution_count (Js.to_string str) in
+    let () = List.iter 
+        (fun m -> 
+            ipython##notebook##kernel##send_pyout_ 
+                (execution_count, Js.string (Exec.html_of_status m output_cell_max_height)))
+        status
+    in
+    let v : iocaml_result t = Js.Unsafe.obj [||] in
+    v##message <- string ""; (* XXX remove me *)
+    v##compilerStatus <- bool true;
+    v
 
 let load_from_server path = 
     let xml = XmlHttpRequest.create () in
@@ -286,8 +307,6 @@ let auto_register_file name =
         let () = Sys_js.register_file ~name ~content in
         1
 
-let ipython = Js.Unsafe.variable "IPython"
-
 let send_stdout_message s w = 
     if Js.Opt.test ipython##notebook && Js.Opt.test ipython##notebook##kernel then
         ipython##notebook##kernel##send_stdout_message_ (Js.string s, Js.string w)
@@ -305,8 +324,6 @@ let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () =
     ipython##notebook##kernel##send_clear_(wait,stdout,stderr,other)
 
 let main () = 
-    (* iocaml variable is now in kernel.js *)
-    let iocaml : iocaml Js.t = Js.Unsafe.variable "iocaml" in
     (* automatically query server for files *)
     Compile.g##auto_register_file_ <- auto_register_file;
     (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
@@ -322,13 +339,13 @@ let main () =
     Toploop.input_name := "";
     (* install the ocaml/js_of_ocaml compiler *)
     iocaml##name <- Js.string "iocamljs"; 
-    iocaml##execute <- Exec.execute;
+    iocaml##execute <- execute;
     (* Bodge. touch iocaml to bring in js.cmi.  
      * The alternatives appear to be 
      * 1] Include Js - that actually works and might be better
      * 2] Expunge Iocaml and provide the API via a #use "iocaml" script
      *)
-    ignore (Exec.execute (-1) (Js.string "Iocaml.touch_me_up()"));
+    ignore (execute (-1) (Js.string "Iocaml.touch_me_up()"));
     ()
 
 

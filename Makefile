@@ -135,7 +135,17 @@ min:
 iocaml.cmi: iocaml.mli
 	ocamlfind ocamlc -c iocaml.mli
 
-iocaml.cmo: iocaml.ml iocaml.cmi
+exec.cmi: exec.mli
+	ocamlfind ocamlc -c exec.mli
+
+exec.cmo: exec.ml exec.cmi 
+	ocamlfind ocamlc -c \
+		-syntax camlp4o -package js_of_ocaml.syntax \
+		$(STD_PACKAGES) \
+		$(COMPILER_LIBS_INC) \
+		exec.ml
+
+iocaml.cmo: iocaml.ml exec.cmi iocaml.cmi
 	ocamlfind ocamlc -c \
 		-syntax camlp4o -package js_of_ocaml.syntax \
 		$(STD_PACKAGES) \
@@ -145,14 +155,14 @@ iocaml.cmo: iocaml.ml iocaml.cmi
 iocaml_main.cmo: iocaml_main.ml iocaml.cmi
 	ocamlfind ocamlc -c iocaml_main.ml
 
-iocaml_full.byte: iocaml.cmo iocaml_main.cmo
+iocaml_full.byte: exec.cmo iocaml.cmo iocaml_main.cmo
 	ocamlfind ocamlc -linkall -linkpkg -o $@ \
 		$(STD_PACKAGES) \
 		$(USER_PACKAGES) \
 		$(COMPILER_LIBS_INC) $(COMPILER_LIBS) \
 		$(CAMLP4_LIBS_INC) $(CAMLP4_LIBS) \
 		$(SYNTAX_LIB) \
-		iocaml.cmo iocaml_main.cmo
+		exec.cmo iocaml.cmo iocaml_main.cmo
 
 iocaml.byte: iocaml_full.byte 
 	`ocamlc -where`/expunge iocaml_full.byte iocaml.byte \
@@ -175,6 +185,7 @@ static/services/kernels/js/kernel$(EXT).js: kernel.js iocaml.js
 
 install:
 	cp -r static `ipython locate profile iocamljs`
+	cp -r static `opam config var share`/iocamljs-kernel/profile
 
 clean::
 	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 
