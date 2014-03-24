@@ -67,7 +67,7 @@ CAMLP4_LIBS_INC=
 endif
 
 # ocamlfind packages.
-STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml_compiler
+STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml.compiler
 ifneq ($(PACKAGES),)
 USER_PACKAGES=$(foreach p,$(PACKAGES),-package $(p))
 USER_PACKAGES_INC=$(foreach p,$(PACKAGES),`ocamlfind query -i-format $(p) -r | awk '{ printf $$0 " "}'`)
@@ -184,8 +184,10 @@ static/services/kernels/js/kernel$(EXT).js: kernel.js iocaml.js
 # install (not needed anymore with iocamlserver)
 
 install:
-	cp -r static `ipython locate profile iocamljs`
+	rm -rf `opam config var share`/iocamljs-kernel
+	mkdir -p `opam config var share`/iocamljs-kernel/profile
 	cp -r static `opam config var share`/iocamljs-kernel/profile
+	-which ipython >/dev/null 2>&1 && cp -r static `ipython locate profile iocamljs`
 
 clean::
 	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 
