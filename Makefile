@@ -67,7 +67,7 @@ CAMLP4_LIBS_INC=
 endif
 
 # ocamlfind packages.
-STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml_compiler
+STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml.compiler
 ifneq ($(PACKAGES),)
 USER_PACKAGES=$(foreach p,$(PACKAGES),-package $(p))
 USER_PACKAGES_INC=$(foreach p,$(PACKAGES),`ocamlfind query -i-format $(p) -r | awk '{ printf $$0 " "}'`)
