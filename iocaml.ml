@@ -43,14 +43,6 @@ module Compile = struct
                 split beg (cur + 1) in
         Array.of_list(split 0 0)
 
-    class type global_data = object
-        method compile : (string -> string) Js.writeonly_prop
-        method auto_register_file_ : (string -> int) Js.writeonly_prop
-    end
-
-    external global_data : unit -> global_data Js.t = "caml_get_global_data"
-    let g = global_data ()
-
     let () = Topdirs.dir_directory "/cmis"
 
     let initial_primitive_count =
@@ -93,7 +85,7 @@ module Compile = struct
             let res = String.concat "" !stubs ^ res in
             res
         in
-        g##compile <- compile (*XXX HACK!*)
+        Js.Unsafe.global##toplevelCompile <- compile (*XXX HACK!*)
 end
 
 module Base64 = struct
@@ -218,6 +210,7 @@ let execute execution_count str =
     v
 
 let load_from_server path = 
+  try
     let xml = XmlHttpRequest.create () in
     let () = xml##_open(Js.string "GET", Js.string ("file/" ^ path), Js._false) in
     let () = xml##send(Js.null) in
@@ -231,13 +224,8 @@ let load_from_server path =
         Some(str)
     else
         None
-
-let auto_register_file name = 
-    match load_from_server name with
-    | None -> 0
-    | Some(content) ->
-        let () = Sys_js.register_file ~name ~content in
-        1
+  with _ ->
+    None
 
 let send_stdout_message s w = 
     if Js.Opt.test ipython##notebook && Js.Opt.test ipython##notebook##kernel then
@@ -257,7 +245,7 @@ let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () =
 
 let main () = 
     (* automatically query server for files *)
-    Compile.g##auto_register_file_ <- auto_register_file;
+    Sys_js.register_autoload "" load_from_server;
     (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
     Firebug.console##log (Js.string "iocamljs");
     (* re-direct output to the notebook *)

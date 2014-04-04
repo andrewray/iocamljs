@@ -28,6 +28,7 @@
 # 1. PACKAGES - a set of ocamlfind packages
 # 2. SYNTAX - a set of ocamlfind syntax extensions
 # 3. MODULES - module names to keep
+# 4. PRIMJS - extra javascript primtives
 #
 # Note; the syntax extensions in step 2 are linked in not run
 # Note; to specify more than one package separate with spaces
@@ -41,17 +42,21 @@
 #######################################################################
 # configuration
 
+#JSC=/home/andyman/.opam/4.01.0-test/bin/js_of_ocaml
+JSC=js_of_ocaml
+
 # js_of_ocaml
 ifeq ($(OPT),1)
 JS_OF_OCAML_OPTS=-opt 2 noinline -linkall
 else
-JS_OF_OCAML_OPTS=-noinline -linkall
+JS_OF_OCAML_OPTS=-noinline -linkall -pretty -debuginfo -tc none
 endif
 
 JS_FILES= \
 	$(shell ocamlfind query js_of_ocaml)/runtime.js \
 	$(shell ocamlfind query js_of_ocaml)/weak.js \
-	toplevel_runtime.js 
+	$(shell ocamlfind query js_of_ocaml)/toplevel.js \
+	$(PRIMJS)
 
 # Compiler libs
 COMPILER_LIBS=ocamlcommon.cma ocamlbytecomp.cma ocamltoplevel.cma
@@ -129,6 +134,9 @@ full:
 min:
 	make all OPT=1 EXT=".min"
 
+core:
+	make all EXT=".core" PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
+
 #######################################################################
 # build
 
@@ -169,7 +177,7 @@ iocaml.byte: iocaml_full.byte
 		$(KEEP_MODULES) $(MODULES)
 
 iocaml.js: iocaml.byte $(JS_FILES)
-	js_of_ocaml -toplevel -noruntime $(JS_OF_OCAML_OPTS) \
+	$(JSC) -toplevel -noruntime $(JS_OF_OCAML_OPTS) \
 		$(USER_PACKAGES_INC) \
 		$(SYNTAX_INC) $(CAMLP4_LIBS_INC) \
 		-I . $(COMPILER_LIBS_INC) $(JS_FILES) \

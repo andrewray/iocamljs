@@ -56,7 +56,8 @@ let run_cell_lb execution_count lb =
                 | Ok(false) -> Error(Buffer.contents buffer) :: out_messages
                 | Error(Sys.Break) -> Error("Interrupted.") :: out_messages
                 | Error(exn) -> 
-                    Error(try get_error_info exn with _ -> "Execution error.") :: out_messages
+                    Error(try get_error_info exn 
+                          with _ -> ("IOcaml execution error: " ^ Printexc.to_string exn)) :: out_messages
             end
         in
         List.rev (run [] phrases)

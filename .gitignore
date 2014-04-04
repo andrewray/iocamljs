@@ -2,3 +2,5 @@
 *~
 .ipynb_checkpoints
 notebooks/.ipynb_checkpoints
+static/services/kernels/js/kernel.*.js
+static/services/kernels/js/kernel.js
