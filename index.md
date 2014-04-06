@@ -3,8 +3,9 @@ layout: post
 title: Blogging Like a Hacker
 ---
 
-# Jekyll testing
+# IOCamlJS Online Demos
 
-Can we get jekyll to process this file?
+* [IOCaml REPL](min.html)
+* [IOCaml REPL](full.html) with js_of_ocaml, lwt and syntax extensions
 
-How about some sort of theme?
+
