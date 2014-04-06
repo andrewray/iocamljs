@@ -6,3 +6,5 @@ title: Blogging Like a Hacker
 # Jekyll testing
 
 Can we get jekyll to process this file?
+
+How about some sort of theme?
