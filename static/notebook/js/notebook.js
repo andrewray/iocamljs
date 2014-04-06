@@ -1629,6 +1629,7 @@ var IPython = (function (IPython) {
      */
     Notebook.prototype.save_notebook = function () {
         // We may want to move the name/id/nbformat logic inside toJSON?
+        /*
         var data = this.toJSON();
         data.metadata.name = this.notebook_name;
         data.nbformat = this.nbformat;
@@ -1650,6 +1651,7 @@ var IPython = (function (IPython) {
         $([IPython.events]).trigger('notebook_saving.Notebook');
         var url = this.baseProjectUrl() + 'notebooks/' + this.notebook_id;
         $.ajax(url, settings);
+        */
     };
     
     /**
