@@ -47,7 +47,7 @@ JSC=js_of_ocaml
 
 # js_of_ocaml
 ifeq ($(OPT),1)
-JS_OF_OCAML_OPTS=-opt 2 noinline -linkall
+JS_OF_OCAML_OPTS=-opt 2 -noinline -linkall
 else
 JS_OF_OCAML_OPTS=-noinline -linkall -pretty -debuginfo -tc none
 endif
@@ -135,7 +135,7 @@ min:
 	make all OPT=1 EXT=".min"
 
 core:
-	make all EXT=".core" PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
+	make all EXT=".core" OPT=1 PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
 
 #######################################################################
 # build

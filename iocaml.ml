@@ -246,7 +246,6 @@ let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () =
 let main () = 
     (* automatically query server for files *)
     Sys_js.register_autoload "" load_from_server;
-    (*let ipython : _iPython Js.t = Js.Unsafe.variable "IPython" in*)
     Firebug.console##log (Js.string "iocamljs");
     (* re-direct output to the notebook *)
     Sys.interactive := true;
