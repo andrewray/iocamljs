@@ -3,6 +3,8 @@ layout: default
 title: IOCamlJS Demos
 ---
 
+<object type="image/svg+xml" data="IOnotepadJS.svg"></object>
+
 # IOCamlJS Online Demos
 
 * [IOCaml REPL](min.html)
