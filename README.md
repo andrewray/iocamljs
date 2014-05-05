@@ -1,4 +1,4 @@
-![IOCaml logo](http://github.com/andrewray/iocamlserver/logos/IOlogoJS.png?raw=true "IOCaml logo")
+![IOCaml logo](http://github.com/andrewray/iocamlserver/tree/master/logos/IOlogoJS.png?raw=true "IOCaml logo")
 
 # IOCamlJS 
 
