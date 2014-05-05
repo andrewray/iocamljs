@@ -1,3 +1,5 @@
+![IOCaml logo](http://github.com/andrewray/iocamlserver/logos/IOlogoJS.png?raw=true "IOCaml logo")
+
 # IOCamlJS 
 
 IOCaml is an OCaml kernel for the 
