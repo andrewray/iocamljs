@@ -42,13 +42,7 @@ or to just get the kernel
 $ opam install iocamljs-kernel
 ```
 
-The latest precompiled version can be downloaded from 
+Precompiled versions which can be used with the [Enthought](https://www.enthought.com/downloads/) 
+IPython distribution on Windows can be downloaded from 
 [here](https://github.com/andrewray/iocamljs/releases/download/v0.4/static.tar.gz).
-
-## Js\_of\_ocaml version
-
-IOCamlJS currently requries a dev version of js\_of\_ocaml.  At the
-moment it necessary to provide the javascript for the kernels rather
-than compile them.  This should change with the release of js\_of\_ocaml
-1.5.
 
