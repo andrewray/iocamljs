@@ -4,3 +4,7 @@
 notebooks/.ipynb_checkpoints
 static/services/kernels/js/kernel.*.js
 static/services/kernels/js/kernel.js
+*.cmi
+*.cmo
+*.byte
+iocaml.js
