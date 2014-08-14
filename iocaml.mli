@@ -19,7 +19,7 @@ val display : ?base64:bool -> string -> string -> unit
 val send_clear : ?wait:bool -> ?stdout:bool -> ?stderr:bool -> ?other:bool -> unit -> unit
 
 (* load a (binary) file from the server *)
-val load_from_server : string -> string option
+val load_from_server : (string*string) -> string option
 
 val output_cell_max_height : string ref
 

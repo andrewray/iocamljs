@@ -209,7 +209,7 @@ let execute execution_count str =
     v##compilerStatus <- bool true;
     v
 
-let load_from_server path = 
+let load_from_server (_,path) = 
   try
     let xml = XmlHttpRequest.create () in
     let () = xml##_open(Js.string "GET", Js.string ("file/" ^ path), Js._false) in

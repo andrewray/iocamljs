@@ -84,6 +84,10 @@ SYNTAX_LIB=$(foreach s,$(SYNTAX),`ocamlfind query -predicates syntax,toploop,pre
 SYNTAX_INC=$(foreach s,$(SYNTAX),`ocamlfind query -i-format $(s)`)
 endif
 
+# enable threads
+ifneq ($(THREAD),)
+LINK_THREAD=-thread
+endif
 
 KEEP_COMPILER=\
 Arg Array ArrayLabels Buffer Callback CamlinternalLazy CamlinternalMod CamlinternalOO \
@@ -137,6 +141,16 @@ min:
 core:
 	make all EXT=".core" OPT=1 PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
 
+spoc:
+	make all \
+		OPT=1 \
+		THREAD=1 EXT=".spoc" \
+		CAMLP4=1 LWT=1 JSOO=1 \
+		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax sarek_syntax spoc_external_kernels" \
+		PACKAGES="bigarray spoc_external_kernels spoc sarek sarek_syntax" \
+		MODULES="Spoc Kirc Bigarray" \
+		PRIMJS="$(shell ocamlfind query spoc)/spoc_lib.js"
+
 #######################################################################
 # build
 
@@ -164,7 +178,7 @@ iocaml_main.cmo: iocaml_main.ml iocaml.cmi
 	ocamlfind ocamlc -c iocaml_main.ml
 
 iocaml_full.byte: exec.cmo iocaml.cmo iocaml_main.cmo
-	ocamlfind ocamlc -linkall -linkpkg -o $@ \
+	ocamlfind ocamlc $(LINK_THREAD) -linkall -linkpkg -o $@ \
 		$(STD_PACKAGES) \
 		$(USER_PACKAGES) \
 		$(COMPILER_LIBS_INC) $(COMPILER_LIBS) \
