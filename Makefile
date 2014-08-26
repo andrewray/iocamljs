@@ -98,7 +98,8 @@ Iocaml
 
 # camlp4
 ifeq ($(CAMLP4),1)
-KEEP_CAMLP4=Camlp4 Camlp4_config Camlp4_import Camlp4Top
+KEEP_CAMLP4=Camlp4 Camlp4_config Camlp4Top
+#KEEP_CAMLP4+=Camlp4_import 
 endif
 
 # lwt
