@@ -162,7 +162,7 @@ exec.cmi: exec.mli
 
 exec.cmo: exec.ml exec.cmi 
 	ocamlfind ocamlc -c \
-		-syntax camlp4o -package js_of_ocaml.syntax \
+		-syntax camlp4o -package js_of_ocaml.syntax,optcomp \
 		$(STD_PACKAGES) \
 		$(COMPILER_LIBS_INC) \
 		exec.ml
