@@ -253,9 +253,10 @@ let main () =
     Sys_js.set_channel_flusher stderr print_stderr;
     (* initialize the toploop *)
     Toploop.set_paths();
-    !Toploop.toplevel_startup_hook();
+    (*!Toploop.toplevel_startup_hook();
     Toploop.initialize_toplevel_env ();
-    Toploop.input_name := "";
+    Toploop.input_name := "";*)
+    JsooTop.initialize();
     (* install the ocaml/js_of_ocaml compiler *)
     iocaml##name <- Js.string "iocamljs"; 
     iocaml##execute <- execute;

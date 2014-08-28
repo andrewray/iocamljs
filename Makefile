@@ -72,7 +72,7 @@ CAMLP4_LIBS_INC=
 endif
 
 # ocamlfind packages.
-STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml.compiler
+STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml.compiler,js_of_ocaml.toplevel
 ifneq ($(PACKAGES),)
 USER_PACKAGES=$(foreach p,$(PACKAGES),-package $(p))
 USER_PACKAGES_INC=$(foreach p,$(PACKAGES),`ocamlfind query -i-format $(p) -r | awk '{ printf $$0 " "}'`)
@@ -128,29 +128,29 @@ KEEP_MODULES=$(KEEP_COMPILER) $(KEEP_CAMLP4) $(KEEP_LWT) $(KEEP_JSOO) $(KEEP_TOP
 
 EXT=
 
-all: static/services/kernels/js/kernel$(EXT).js
-
-full:
-	make all \
-		OPT=1 EXT=".full" \
-		CAMLP4=1 LWT=1 JSOO=1 \
-		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax" 
-
-min:
-	make all OPT=1 EXT=".min"
-
-core:
-	make all EXT=".core" OPT=1 PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
-
-spoc:
-	make all \
-		OPT=1 \
-		THREAD=1 EXT=".spoc" \
-		CAMLP4=1 LWT=1 JSOO=1 \
-		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax sarek_syntax spoc_external_kernels" \
-		PACKAGES="bigarray spoc_external_kernels spoc sarek sarek_syntax" \
-		MODULES="Spoc Kirc Bigarray" \
-		PRIMJS="$(shell ocamlfind query spoc)/spoc_lib.js"
+#all: static/services/kernels/js/kernel$(EXT).js
+#
+#full:
+#	make all \
+#		OPT=1 EXT=".full" \
+#		CAMLP4=1 LWT=1 JSOO=1 \
+#		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax" 
+#
+#min:
+#	make all OPT=1 EXT=".min"
+#
+#core:
+#	make all EXT=".core" OPT=1 PACKAGES="core_kernel" PRIMJS="core_runtime.js" MODULES="Core_kernel"
+#
+#spoc:
+#	make all \
+#		OPT=1 \
+#		THREAD=1 EXT=".spoc" \
+#		CAMLP4=1 LWT=1 JSOO=1 \
+#		SYNTAX="js_of_ocaml.syntax lwt.syntax.options lwt.syntax sarek_syntax spoc_external_kernels" \
+#		PACKAGES="bigarray spoc_external_kernels spoc sarek sarek_syntax" \
+#		MODULES="Spoc Kirc Bigarray" \
+#		PRIMJS="$(shell ocamlfind query spoc)/spoc_lib.js"
 
 #######################################################################
 # build
@@ -187,21 +187,45 @@ iocaml_full.byte: exec.cmo iocaml.cmo iocaml_main.cmo
 		$(SYNTAX_LIB) \
 		exec.cmo iocaml.cmo iocaml_main.cmo
 
-iocaml.byte: iocaml_full.byte 
-	`ocamlc -where`/expunge iocaml_full.byte iocaml.byte \
-		$(KEEP_MODULES) $(MODULES)
+#iocaml.byte: iocaml_full.byte 
+#	`ocamlc -where`/expunge iocaml_full.byte iocaml.byte \
+#		$(KEEP_MODULES) $(MODULES)
+#
+#iocaml.js: iocaml.byte $(JS_FILES)
+#	$(JSC) -toplevel -noruntime $(JS_OF_OCAML_OPTS) \
+#		$(USER_PACKAGES_INC) \
+#		$(SYNTAX_INC) $(CAMLP4_LIBS_INC) \
+#		-I . $(COMPILER_LIBS_INC) $(JS_FILES) \
+#		$(JSOO_INCLUDE) $(LWT_INCLUDE) \
+#		iocaml.byte
 
-iocaml.js: iocaml.byte $(JS_FILES)
-	$(JSC) -toplevel -noruntime $(JS_OF_OCAML_OPTS) \
-		$(USER_PACKAGES_INC) \
-		$(SYNTAX_INC) $(CAMLP4_LIBS_INC) \
-		-I . $(COMPILER_LIBS_INC) $(JS_FILES) \
-		$(JSOO_INCLUDE) $(LWT_INCLUDE) \
-		iocaml.byte
+min: exec.cmo iocaml.cmo iocaml_main.cmo
+	jsoo_mktop \
+		-verbose \
+		-dont-export-unit gc \
+		exec.cmo iocaml.cmo iocaml_main.cmo \
+		-jsopt +weak.js -jsopt +toplevel.js \
+		-jsopt -I -jsopt ./ \
+		-o iocaml.byte
+	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.min.js
+
+full: exec.cmo iocaml.cmo iocaml_main.cmo
+	jsoo_mktop \
+		-verbose \
+		-dont-export-unit gc \
+		-top-syntax lwt.syntax \
+		-top-syntax js_of_ocaml.syntax \
+		-export-package lwt \
+		-export-package js_of_ocaml \
+		exec.cmo iocaml.cmo iocaml_main.cmo \
+		-jsopt +weak.js -jsopt +toplevel.js \
+		-jsopt -I -jsopt ./ \
+		-o iocaml.byte
+	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.full.js
 
 # main target
-static/services/kernels/js/kernel$(EXT).js: kernel.js iocaml.js
-	cat kernel.js iocaml.js > static/services/kernels/js/kernel$(EXT).js
+#static/services/kernels/js/kernel$(EXT).js: kernel.js iocaml.js
+#	cat kernel.js iocaml.js > static/services/kernels/js/kernel$(EXT).js
 
 #######################################################################
 # install (not needed anymore with iocamlserver)
@@ -213,6 +237,7 @@ install:
 	-which ipython >/dev/null 2>&1 && cp -r static `ipython locate profile iocamljs`
 
 clean::
+	- rm -f *.cmis.js
 	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 
 	- rm -fr *~
 
