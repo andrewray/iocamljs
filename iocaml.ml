@@ -243,6 +243,14 @@ let display ?(base64=false) mime_type data =
 let send_clear ?(wait=true) ?(stdout=true) ?(stderr=true) ?(other=true) () = 
     ipython##notebook##kernel##send_clear_(wait,stdout,stderr,other)
 
+let lwt_main=
+  ("module Lwt_main = struct
+       let run t = match Lwt.state t with
+         | Lwt.Return x -> x
+         | Lwt.Fail e -> raise e
+         | Lwt.Sleep -> failwith \"Lwt_main.run: thread didn't return\"
+      end")
+
 let main () = 
     (* automatically query server for files *)
     Sys_js.register_autoload "" load_from_server;
@@ -266,6 +274,7 @@ let main () =
      * 2] Expunge Iocaml and provide the API via a #use "iocaml" script
      *)
     ignore (execute (-1) (Js.string "Iocaml.touch_me_up()"));
+    ignore (execute (-1) (Js.string lwt_main));
     ()
 
 

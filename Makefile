@@ -203,6 +203,7 @@ min: exec.cmo iocaml.cmo iocaml_main.cmo
 	jsoo_mktop \
 		-verbose \
 		-dont-export-unit gc \
+		-export-unit iocaml \
 		exec.cmo iocaml.cmo iocaml_main.cmo \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
@@ -217,6 +218,7 @@ full: exec.cmo iocaml.cmo iocaml_main.cmo
 		-top-syntax js_of_ocaml.syntax \
 		-export-package lwt \
 		-export-package js_of_ocaml \
+		-export-unit iocaml \
 		exec.cmo iocaml.cmo iocaml_main.cmo \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
@@ -234,7 +236,7 @@ install:
 	rm -rf `opam config var share`/iocamljs-kernel
 	mkdir -p `opam config var share`/iocamljs-kernel/profile
 	cp -r static `opam config var share`/iocamljs-kernel/profile
-	-which ipython >/dev/null 2>&1 && cp -r static `ipython locate profile iocamljs`
+	#-which ipython >/dev/null 2>&1 && cp -r static `ipython locate profile iocamljs`
 
 clean::
 	- rm -f *.cmis.js
