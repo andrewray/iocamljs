@@ -20,7 +20,8 @@ description: Online OCaml Javascript REPLs
 
 ## OCaml 4.02.0 with Modular Implicits 
 
-_prototype compiler_
+Prototype compiler with ad-hoc polymorphism support via modular 
+implicits - [draft paper](http://www.lpw25.net/ml2014.pdf).
 
 * [Basic REPL](modimp.html)
 * [Example](modimp_show.html): defining Show
