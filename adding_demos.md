@@ -28,8 +28,8 @@ kernel: min
 
 The notebook_guid parameter should point to the newly created notebook.  The kernel
 parameter selects which iocamljs kernel will run.  Here `min` refers to the kernel
-`static/services/kernels/js/kernel.min.js`.  You can also add new kernels with custom 
-package sets if required.
+`static/services/kernels/js/kernel.min.js`.  You can also add [new kernels](compiling_kernels.html)
+with custom package sets if required.
 
 Finally add the link to the landing page in index.md
 

@@ -6,6 +6,8 @@ description: Online OCaml Javascript REPLs
 
 <object type="image/svg+xml" data="IOnotepadJS.svg"></object>
 
+_[adding new demos](adding_demos.html), [compiling custom kernels](compiling_kernels.html)_
+
 ## OCaml 4.01.0
 
 * [Basic REPL](min.html)
@@ -26,3 +28,4 @@ implicits - [draft paper](http://www.lpw25.net/ml2014.pdf).
 
 * [Basic REPL](modimp.html)
 * [Example](modimp_show.html): defining Show
+
