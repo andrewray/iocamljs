@@ -49,13 +49,13 @@ A more complex example with js_of_ocaml, lwt, syntax extensions and uuidm.
 
 ~~~
 $ jsoo_mktop -dont-export-unit gc \
-		-top-syntax lwt.syntax \
-		-top-syntax js_of_ocaml.syntax \
-		-export-package lwt \
-		-export-package js_of_ocaml \
-		-export-package uuidm \
-    -export-package iocamljs-kernel \
-    -jsopt +weak.js -jsopt +toplevel.js -o iocaml.byte
+  -top-syntax lwt.syntax \
+  -top-syntax js_of_ocaml.syntax \
+  -export-package lwt \
+  -export-package js_of_ocaml \
+  -export-package uuidm \
+  -export-package iocamljs-kernel \
+  -jsopt +weak.js -jsopt +toplevel.js -o iocaml.byte
 ~~~
 
 
