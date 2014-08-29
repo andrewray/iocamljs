@@ -6,5 +6,7 @@ static/services/kernels/js/kernel.*.js
 static/services/kernels/js/kernel.js
 *.cmi
 *.cmo
+*.cma
+*.cmis.js
 *.byte
 iocaml.js

@@ -6,7 +6,10 @@
 #
 #######################################################################
 
-
+all:
+	@echo "usage:"
+	@echo "make clean <target>"
+	@echo "  where <target> is min, full or tyxml"
 
 COMPILER_LIBS_INC=$(shell ocamlfind query -i-format compiler-libs)
 STD_PACKAGES=-package str,dynlink,js_of_ocaml,js_of_ocaml.compiler,js_of_ocaml.toplevel
@@ -34,18 +37,21 @@ iocaml.cmo: iocaml.ml exec.cmi iocaml.cmi
 iocaml_main.cmo: iocaml_main.ml iocaml.cmi
 	ocamlfind ocamlc -c iocaml_main.ml
 
-min: exec.cmo iocaml.cmo iocaml_main.cmo
+iocamljs.cma: exec.cmo iocaml.cmo iocaml_main.cmo
+	ocamlfind ocamlc -a -o iocamljs.cma exec.cmo iocaml.cmo iocaml_main.cmo
+
+min: iocamljs.cma
 	jsoo_mktop \
 		-verbose \
 		-dont-export-unit gc \
 		-export-unit iocaml \
-		exec.cmo iocaml.cmo iocaml_main.cmo \
+		iocamljs.cma \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.min.js
 
-full: exec.cmo iocaml.cmo iocaml_main.cmo
+full: iocamljs.cma
 	jsoo_mktop \
 		-verbose \
 		-dont-export-unit gc \
@@ -54,13 +60,13 @@ full: exec.cmo iocaml.cmo iocaml_main.cmo
 		-export-package lwt \
 		-export-package js_of_ocaml \
 		-export-unit iocaml \
-		exec.cmo iocaml.cmo iocaml_main.cmo \
+		iocamljs.cma \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.full.js
 
-tyxml: exec.cmo iocaml.cmo iocaml_main.cmo
+tyxml: iocamljs.cma
 	jsoo_mktop \
 		-verbose \
 		-dont-export-unit gc \
@@ -75,7 +81,7 @@ tyxml: exec.cmo iocaml.cmo iocaml_main.cmo
 		-export-unit html5_types \
 		-export-unit svg_sigs \
 		-export-unit svg_types \
-		exec.cmo iocaml.cmo iocaml_main.cmo \
+		iocamljs.cma \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
@@ -83,6 +89,12 @@ tyxml: exec.cmo iocaml.cmo iocaml_main.cmo
 
 #######################################################################
 # install (not needed anymore with iocamlserver)
+
+install-lib:
+	ocamlfind install iocamljs-kernel META exec.cmi iocaml.cmi iocaml_main.cmi iocamljs.cma kernel.js
+
+uninstall-lib:
+	ocamlfind remove iocamljs-kernel
 
 install:
 	rm -rf `opam config var share`/iocamljs-kernel
@@ -92,13 +104,7 @@ install:
 
 clean::
 	- rm -f *.cmis.js
-	- rm -f *.cm[io] iocaml_full.byte iocaml.byte iocaml.js 
+	- rm -f *.cm[ioa] iocaml_full.byte iocaml.byte iocaml.js 
 	- rm -fr *~
 
-# debugging silly makefile macros
-say:
-	echo $(USER_PACKAGES)
-	echo $(USER_PACKAGES_INC)
-	echo $(SYNTAX_LIB)
-	echo $(SYNTAX_INC)
 
