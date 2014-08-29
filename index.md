@@ -17,6 +17,7 @@ description: Online OCaml Javascript REPLs
 
 * [Basic REPL](min402.html)
 * [REPL](full402.html) with js_of_ocaml, lwt and syntax extensions
+* [TyXML](tyxml.html) demo.  Typed HTML and SVG with rendering
 
 ## OCaml 4.02.0 with Modular Implicits 
 
