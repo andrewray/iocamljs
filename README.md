@@ -1,4 +1,4 @@
-![IOCaml logo](https://raw.githubusercontent.com/andrewray/iocamlserver/master/logos/IOlogo.png "IOCaml logo")
+![IOCaml logo](https://raw.githubusercontent.com/andrewray/iocamlserver/master/logos/IOlogoJS.png "IOCaml logo")
 
 [![Build Status](https://travis-ci.org/andrewray/iocamljs.svg?branch=master)](https://travis-ci.org/andrewray/iocamljs)
 
