@@ -35,5 +35,6 @@ fi
 opam install $PKG --deps-only
 
 # build 
-make
+make clean min
+make clean full
 
