@@ -15,7 +15,7 @@ _[adding new demos](adding_demos.html), [compiling custom kernels](compiling_ker
 * [OCaml core language tutorial](core_language.html)
 * [Js_of_ocaml WebGL demo](webgl_demo.html)
 
-## OCaml 4.02.0 (Release Candidate 1)
+## OCaml 4.02.0 
 
 * [Basic REPL](min402.html)
 * [REPL](full402.html) with js_of_ocaml, lwt and syntax extensions
