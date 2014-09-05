@@ -96,25 +96,22 @@ let escape_html b =
     Buffer.contents b'
 
 let html_of_status message output_cell_max_height = 
-    let output_styling colour data = 
-        let onclick = "
-onclick=\"
-if (this.style.maxHeight === 'none') 
-    this.style.maxHeight = '" ^ output_cell_max_height ^ "';
-else
-    this.style.maxHeight = 'none'; 
-\"" 
+    let output_styling ok data = 
+        let colour = if ok then "slategray" else "red" in
+        let onclick = 
+          "onclick=\"if (this.style.maxHeight === 'none') this.style.maxHeight = '" ^ 
+          output_cell_max_height ^ "'; else this.style.maxHeight = 'none'; \"" 
         in
         "<pre style=\"color:" ^ colour ^ 
-            ";max-height:" ^ output_cell_max_height ^ ";overflow:hidden\" " ^ 
-            onclick ^ ">" ^ 
+            (if ok then ";max-height:" ^ output_cell_max_height ^ ";overflow:hidden\" " ^ onclick else "\"") ^ 
+            ">" ^ 
             escape_html data ^ 
         "</pre>" 
     in
     let data = 
         match message with
-        | Ok(data) -> output_styling "slategray" data
-        | Error(data) -> output_styling "red" data
+        | Ok(data) -> output_styling true data
+        | Error(data) -> output_styling false data
     in
     data
 
