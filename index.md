@@ -6,7 +6,9 @@ description: Online OCaml Javascript REPLs
 
 <object type="image/svg+xml" data="IOnotepadJS.svg"></object>
 
-_[adding new demos](adding_demos.html), [compiling custom kernels](compiling_kernels.html)_
+_[getting started](getting_started.html),
+[adding new demos](adding_demos.html), 
+[compiling custom kernels](compiling_kernels.html)_
 
 ## OCaml 4.01.0
 
@@ -20,6 +22,7 @@ _[adding new demos](adding_demos.html), [compiling custom kernels](compiling_ker
 * [Basic REPL](min402.html)
 * [REPL](full402.html) with js_of_ocaml, lwt and syntax extensions
 * [TyXML](tyxml.html) demo.  Typed HTML and SVG with rendering
+* [H.261 Decoder](oh261.html) demo - for no good reason!
 
 ## OCaml 4.02.0 with Modular Implicits 
 
@@ -27,7 +30,7 @@ Prototype compiler with ad-hoc polymorphism support via modular
 implicits - [draft paper](http://www.lpw25.net/ml2014.pdf).
 
 * [Basic REPL](modimp.html)
-* [Example](modimp_show.html): defining Show
+* [Example](modimp_show.html) defining Show
 
 ## OCaml 4.02.0 with Improved Errors
 
