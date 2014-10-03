@@ -32,7 +32,7 @@ implicits - [draft paper](http://www.lpw25.net/ml2014.pdf).
 * [Basic REPL](modimp.html)
 * [Example](modimp_show.html) defining Show
 
-## OCaml 4.02.0 with Improved Errors
+## OCaml 4.03.0+pr102 with Improved Errors
 
 Arthur Charguérauds patch to 
 [improve type error](https://ocaml.org/meetings/ocaml/2014/ocaml2014_9.pdf) 
