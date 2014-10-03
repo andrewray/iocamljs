@@ -87,6 +87,17 @@ tyxml: iocamljs.cma
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.tyxml.js
 
+
+#######################################################################
+# Stuff that requires installed iocamljs-kernel
+# using iocaml_jsmktop, which in turn usies jsoo_mktop.
+
+github: iocamljs.cma
+	./iocamljs_mktop.sh github -top-syntax lwt.syntax -top-syntax js_of_ocaml.syntax -export-package lwt -export-package js_of_ocaml \
+		-export-package github -export-package github.js \
+		-export-package cohttp.js -export-package cohttp.lwt-core -export-package cohttp \
+		-export-unit github_s
+
 #######################################################################
 # install (not needed anymore with iocamlserver)
 

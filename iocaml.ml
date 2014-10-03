@@ -252,7 +252,8 @@ let lwt_main=
       end")
 
 let main () = 
-    Clflags.easy := true;
+    Clflags.strict_sequence := true;
+    Clflags.new_type_errors := true;
     (* automatically query server for files *)
     Sys_js.register_autoload "" load_from_server;
     Firebug.console##log (Js.string "iocamljs");
