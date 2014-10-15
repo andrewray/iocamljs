@@ -15,17 +15,17 @@ To get started we would use the standard iocaml server
 to create some notebooks with a potentially 
 [custom kernel](compiling_kernels.html).
 
-```
+~~~
 $ iocaml -js my_test_kernel my_notebooks/
-```
+~~~
 
 Once happy with the notebooks a site can be created
 
-```
+~~~
 $ iocaml -js my_test_kernel my_notebooks/ \
     -create-static-site my_site_dir \
     -static-site-base-path /online_dir
-```
+~~~
 
 The site will be created in `my_site_dir`.  
 
