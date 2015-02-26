@@ -87,7 +87,7 @@ $([IPython.events]).on('app_initialized.NotebookApp', function(){
         }
         stream.eatWhile(/\w/);
         var cur = stream.current();
-        return words[cur] || 'variable';
+        return words.hasOwnProperty(cur) ? words[cur] : 'variable';
       }
 
       function tokenString(stream, state) {
