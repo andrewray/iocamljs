@@ -40,14 +40,21 @@ iocaml_main.cmo: iocaml_main.ml iocaml.cmi
 iocamljs.cma: exec.cmo iocaml.cmo iocaml_main.cmo
 	ocamlfind ocamlc -a -o iocamljs.cma exec.cmo iocaml.cmo iocaml_main.cmo
 
+
 min: iocamljs.cma
 	jsoo_mktop \
 		-verbose \
 		-dont-export-unit gc \
 		-export-unit iocaml \
+		-export-unit trx \
+		-export-unit longident \
+		-export-unit print_code \
+		-export-unit runcode \
+		-export-unit typetexp \
 		iocamljs.cma \
 		-jsopt +weak.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
+		metalib.cma \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.min.js
 
