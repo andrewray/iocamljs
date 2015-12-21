@@ -46,7 +46,7 @@ min: iocamljs.cma
 		-dont-export-unit gc \
 		-export-unit iocaml \
 		iocamljs.cma \
-		-jsopt +weak.js -jsopt +toplevel.js \
+		-jsopt +weak.js -jsopt +dynlink.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.min.js
@@ -61,7 +61,7 @@ full: iocamljs.cma
 		-export-package js_of_ocaml \
 		-export-unit iocaml \
 		iocamljs.cma \
-		-jsopt +weak.js -jsopt +toplevel.js \
+		-jsopt +weak.js -jsopt +dynlink.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.full.js
@@ -82,7 +82,7 @@ tyxml: iocamljs.cma
 		-export-unit svg_sigs \
 		-export-unit svg_types \
 		iocamljs.cma \
-		-jsopt +weak.js -jsopt +toplevel.js \
+		-jsopt +weak.js -jsopt +dynlink.js -jsopt +toplevel.js \
 		-jsopt -I -jsopt ./ \
 		-o iocaml.byte
 	cat *.cmis.js kernel.js iocaml.js > static/services/kernels/js/kernel.tyxml.js
