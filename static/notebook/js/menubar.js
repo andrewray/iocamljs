@@ -68,8 +68,34 @@ var IPython = (function (IPython) {
         this.element.find('#new_notebook').click(function () {
             window.open(that.baseProjectUrl()+'new');
         });
-        this.element.find('#open_notebook').click(function () {
-            window.open(that.baseProjectUrl());
+        this.element.find('#open_notebook_url').click(function () {
+          var notebook_id = IPython.notebook.get_notebook_id();
+          var url = that.baseProjectUrl() + 'notebooks/' +
+                    notebook_id
+          url = prompt('Enter URL:', url);
+          IPython.notebook.load_notebook(url)
+        });
+        this.element.find('#open_notebook_file').click(function () {
+          var uploadForm = document.createElement('form');
+          var fileInput = uploadForm.appendChild(document.createElement('input'));
+          function readFile(e){
+            var file = e.target.files[0];
+              if (!file) {
+                return;
+              }
+              var reader = new FileReader();
+              reader.onload = function(e) {
+                var contents = e.target.result;
+                data = JSON.parse(contents);
+                IPython.notebook.load_notebook_success(data, 42, 42);
+              };
+              reader.readAsText(file);
+          }
+          fileInput.type = 'file';
+          fileInput.name = 'notebook_file';
+          fileInput.multiple = false;
+          fileInput.addEventListener('change', readFile, false);
+          fileInput.click();
         });
         this.element.find('#rename_notebook').click(function () {
             IPython.save_widget.rename_notebook();

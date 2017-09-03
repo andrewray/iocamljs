@@ -91,7 +91,10 @@ function (marked) {
 
     $([IPython.events]).on('notebook_loaded.Notebook', first_load);
     $([IPython.events]).trigger('app_initialized.NotebookApp');
-    IPython.notebook.load_notebook($('body').data('notebookId'));
+    var notebook_id = $('body').data('notebookId');
+    IPython.notebook.notebook_id = notebook_id
+    var url = IPython.notebook.baseProjectUrl() + 'notebooks/' + notebook_id
+    IPython.notebook.load_notebook(url);
 
     if (marked) {
         marked.setOptions({
